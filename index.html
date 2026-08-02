@@ -1,0 +1,2354 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark light">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="OurMoney">
+<meta name="theme-color" content="#0b0f1a">
+<title>OurMoney</title>
+<!--
+  Self-contained. No network requests: system fonts only, no CDN, no fetch.
+  Guest data lives in data.js, which is gitignored (names + phone numbers).
+-->
+<style>
+/* ============================================================ design system */
+:root{
+  --bg:#0b0f1a; --bg-elev:#121828; --card:#151c2e; --card-2:#1b2438;
+  --line:#232d45; --line-2:#313d5c;
+  --ink:#eef2f9; --ink-2:#9aa8c2; --ink-3:#6b7a99;
+  --brand:#4f8cff; --brand-2:#7aa9ff; --brand-dim:rgba(79,140,255,.13);
+  --good:#12b981; --good-2:#3ddba0; --good-dim:rgba(18,185,129,.13);
+  --bad:#f2555a; --bad-2:#ff8085; --bad-dim:rgba(242,85,90,.13);
+  --warn:#f5a524; --warn-2:#ffc453; --warn-dim:rgba(245,165,36,.13);
+  --plum:#9d7bff;
+  --r:10px; --r-lg:16px; --r-xl:22px;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 28px -12px rgba(0,0,0,.55);
+  --tap:44px;
+}
+:root[data-theme="light"]{
+  --bg:#f5f7fb; --bg-elev:#fff; --card:#fff; --card-2:#f2f5fa;
+  --line:#e3e9f2; --line-2:#cfd8e6;
+  --ink:#101728; --ink-2:#5a6883; --ink-3:#8493ad;
+  --brand:#2f6fe4; --brand-dim:rgba(47,111,228,.10);
+  --good:#079669; --good-2:#047857; --good-dim:rgba(7,150,105,.11);
+  --bad-2:#b91c1c; --warn-2:#92620e; --brand-2:#1d4ed8; --plum:#6d4aff;
+  --bad:#d92d36; --bad-dim:rgba(217,45,54,.10);
+  --warn:#b7791f; --warn-dim:rgba(183,121,31,.12);
+  --shadow:0 1px 2px rgba(16,24,40,.05),0 10px 26px -14px rgba(16,24,40,.22);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+/* Any element wider than the viewport makes iOS scale the layout viewport,
+   which pushes the fixed bottom nav off screen. clip, not hidden: hidden
+   turns body into a scroll container and breaks position:sticky. */
+html,body{overflow-x:hidden;overflow-x:clip;max-width:100%}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"SF Hebrew","Arial Hebrew",
+              "Segoe UI",Rubik,Arial,sans-serif;
+  background:var(--bg); color:var(--ink);
+  font-size:15px; line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+  padding-bottom:calc(72px + env(safe-area-inset-bottom));
+}
+@media(min-width:860px){body{padding-bottom:2rem}}
+button,input,select,textarea{font:inherit;color:inherit}
+button{background:none;border:none;cursor:pointer}
+a{color:var(--brand-2)}
+
+/* ==================================================================== chrome */
+.topbar{
+  position:sticky; top:0; z-index:40;
+  background:color-mix(in srgb,var(--bg) 88%,transparent);
+  backdrop-filter:saturate(180%) blur(14px);
+  border-bottom:1px solid var(--line);
+  padding:calc(.55rem + env(safe-area-inset-top)) max(1rem,env(safe-area-inset-right)) .55rem max(1rem,env(safe-area-inset-left));
+  display:flex; align-items:center; gap:.75rem;
+}
+.brand{font-weight:800;font-size:1.02rem;letter-spacing:-.01em;white-space:nowrap}
+.brand small{display:block;font-weight:500;font-size:.68rem;color:var(--ink-3);letter-spacing:0}
+.countdown{
+  margin-inline-start:auto; display:flex; align-items:baseline; gap:.35rem;
+  background:var(--brand-dim); border:1px solid color-mix(in srgb,var(--brand) 30%,transparent);
+  color:var(--brand-2); padding:.3rem .7rem; border-radius:999px;
+  font-weight:700; font-size:.82rem; white-space:nowrap;
+}
+.countdown b{font-size:1rem}
+/* The topbar is the one row that must never wrap: brand + pill + up to three
+   icon buttons overflow 375px unless everything shrinks together. */
+@media(max-width:600px){
+  .topbar{gap:.45rem}
+  .brand{font-size:.92rem}
+  .brand small{display:none}
+  .iconbtn{width:38px}
+  .countdown{font-size:.74rem;padding:.25rem .55rem}
+  .cd-x{display:none}
+}
+/* stacked mobile row replacing a wide table row */
+.grow{padding:.65rem 0;border-bottom:1px solid var(--line)}
+.grow:last-child{border-bottom:none}
+.iconbtn{
+  width:var(--tap);height:36px;display:grid;place-items:center;border-radius:var(--r);
+  color:var(--ink-2);border:1px solid var(--line);background:var(--card);
+}
+.iconbtn:hover{color:var(--ink);border-color:var(--line-2)}
+
+/* desktop tabs */
+.tabs{
+  display:none; gap:2px; padding:.3rem; margin:1rem auto 0; max-width:1180px;
+  background:var(--card); border:1px solid var(--line); border-radius:var(--r-lg);
+}
+@media(min-width:860px){.tabs{display:flex}}
+.tabs button{
+  flex:1; padding:.6rem .5rem; border-radius:calc(var(--r-lg) - 5px);
+  font-weight:600; font-size:.85rem; color:var(--ink-3); transition:.15s;
+}
+.tabs button:hover{color:var(--ink-2);background:var(--card-2)}
+.tabs button[aria-selected="true"]{background:var(--brand);color:#fff}
+
+/* mobile bottom nav */
+.botnav{
+  position:fixed; inset-inline:0; bottom:0; z-index:50;
+  display:grid; grid-template-columns:repeat(7,1fr);
+  background:color-mix(in srgb,var(--bg-elev) 94%,transparent);
+  backdrop-filter:saturate(180%) blur(14px);
+  border-top:1px solid var(--line);
+  padding-bottom:env(safe-area-inset-bottom);
+}
+@media(min-width:860px){.botnav{display:none}}
+.botnav button{
+  padding:.5rem .2rem .45rem; display:flex; flex-direction:column;
+  align-items:center; gap:2px; font-size:.62rem; font-weight:600;
+  color:var(--ink-3); min-height:var(--tap);
+}
+.botnav button svg{width:21px;height:21px}
+.botnav button[aria-selected="true"]{color:var(--brand-2)}
+
+.wrap{max-width:1180px;margin:0 auto;padding:1rem max(.85rem,env(safe-area-inset-right)) 1rem max(.85rem,env(safe-area-inset-left))}
+.view{display:none;animation:in .22s ease}
+.view.on{display:block}
+@keyframes in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* =================================================================== pieces */
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);padding:1rem}
+.card+.card{margin-top:.85rem}
+.card-h{display:flex;align-items:center;gap:.5rem;margin-bottom:.85rem;flex-wrap:wrap}
+.card-h h2{font-size:.78rem;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:.06em}
+.card-h .sp{margin-inline-start:auto}
+.dot{width:7px;height:7px;border-radius:50%;flex:none}
+
+.grid{display:grid;gap:.7rem}
+.g2{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(155px,1fr))}
+
+.stat{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);padding:.85rem .95rem;position:relative;overflow:hidden}
+.stat::before{content:"";position:absolute;inset-block:0;inset-inline-start:0;width:3px;background:var(--c,var(--brand))}
+.stat .k{font-size:.72rem;color:var(--ink-3);font-weight:600;margin-bottom:.3rem}
+.stat .v{font-size:1.42rem;font-weight:800;letter-spacing:-.02em;color:var(--c,var(--ink));font-variant-numeric:tabular-nums}
+.stat .s{font-size:.7rem;color:var(--ink-3);margin-top:.15rem}
+@media(max-width:520px){.stat .v{font-size:1.22rem}}
+
+.bar{height:9px;border-radius:99px;background:var(--card-2);overflow:hidden;display:flex}
+.bar i{display:block;height:100%}
+.chips{display:flex;gap:.4rem;flex-wrap:wrap}
+.chip{
+  padding:.32rem .7rem;border-radius:999px;border:1px solid var(--line);
+  background:var(--card);color:var(--ink-2);font-size:.78rem;font-weight:600;
+  white-space:nowrap; min-height:32px;
+}
+.chip[aria-pressed="true"]{background:var(--brand);border-color:var(--brand);color:#fff}
+.chip.sm{font-size:.7rem;padding:.15rem .5rem;min-height:0}
+
+.tag{display:inline-block;padding:.12rem .48rem;border-radius:6px;font-size:.68rem;font-weight:700;white-space:nowrap}
+.t-good{background:var(--good-dim);color:var(--good-2)}
+.t-bad{background:var(--bad-dim);color:var(--bad-2)}
+.t-warn{background:var(--warn-dim);color:var(--warn-2)}
+.t-mute{background:var(--card-2);color:var(--ink-3)}
+.t-brand{background:var(--brand-dim);color:var(--brand-2)}
+
+.btn{padding:.55rem 1.1rem;border-radius:var(--r);font-weight:700;font-size:.85rem;border:1px solid transparent;min-height:38px}
+.btn-p{background:var(--brand);color:#fff}
+.btn-p:hover{filter:brightness(1.1)}
+.btn-o{border-color:var(--line-2);color:var(--ink-2);background:var(--card)}
+.btn-o:hover{border-color:var(--brand);color:var(--brand-2)}
+.btn-d{border-color:var(--line-2);color:var(--bad-2);background:var(--card)}
+.btn.sm{padding:.3rem .7rem;font-size:.76rem;min-height:32px}
+
+input[type=text],input[type=number],input[type=search],input[type=date],select,textarea{
+  width:100%;padding:.5rem .65rem;background:var(--bg-elev);border:1px solid var(--line-2);
+  border-radius:var(--r);outline:none;font-size:.88rem;min-height:38px;
+}
+input:focus,select:focus,textarea:focus{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-dim)}
+input[type=number]{font-variant-numeric:tabular-nums;-moz-appearance:textfield}
+input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+input[type=range]{
+  -webkit-appearance:none;appearance:none;width:100%;height:6px;padding:0;border:none;
+  background:var(--line-2);border-radius:99px;min-height:0;box-shadow:none
+}
+input[type=range]:focus{box-shadow:none}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:22px;height:22px;border-radius:50%;
+  background:var(--brand);border:3px solid var(--bg);cursor:pointer;
+  box-shadow:0 1px 4px rgba(0,0,0,.4)
+}
+input[type=range]::-moz-range-thumb{
+  width:20px;height:20px;border-radius:50%;background:var(--brand);
+  border:3px solid var(--bg);cursor:pointer
+}
+label.fld{display:block}
+label.fld span{display:block;font-size:.7rem;color:var(--ink-3);font-weight:600;margin-bottom:.25rem}
+/* iOS zooms the whole page when focusing any input whose font is under 16px,
+   and the zoom sticks -- that is the sideways scrolling on the phone.
+   Must come after the base input rules above to win the cascade. */
+@media(max-width:680px){
+  input[type=text],input[type=number],input[type=search],input[type=date],select,textarea{font-size:16px}
+  details.acc table{font-size:.76rem}
+  details.acc td,details.acc th{padding:.4rem .35rem}
+}
+
+.search{position:relative}
+.search svg{position:absolute;inset-inline-start:.6rem;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--ink-3);pointer-events:none}
+.search input{padding-inline-start:2.1rem}
+
+/* tables */
+.tscroll{overflow-x:auto;-webkit-overflow-scrolling:touch;margin-inline:-1rem;padding-inline:1rem}
+table{width:100%;border-collapse:collapse;font-size:.85rem}
+th{
+  position:sticky;top:0;z-index:5;text-align:start;padding:.55rem .6rem;
+  background:var(--card-2);color:var(--ink-3);font-size:.7rem;font-weight:700;
+  text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;
+  border-bottom:1px solid var(--line);
+}
+td{padding:.55rem .6rem;border-bottom:1px solid var(--line);vertical-align:middle}
+tbody tr:hover td{background:var(--card-2)}
+tbody tr:last-child td{border-bottom:none}
+.num{text-align:end;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tot td{background:var(--card-2)!important;font-weight:800;border-top:2px solid var(--line-2)}
+
+/* row list (mobile-friendly alternative to tables) */
+.row{display:flex;align-items:center;gap:.6rem;padding:.62rem 0;border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:none}
+.row .main{flex:1;min-width:0}
+.row .name{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .sub{font-size:.72rem;color:var(--ink-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .val{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+
+.empty{text-align:center;color:var(--ink-3);padding:2rem 1rem;font-size:.85rem}
+.note{font-size:.74rem;color:var(--ink-3);line-height:1.65}
+.row .sub{margin-top:2px;line-height:1.55}
+/* blocks with several stacked info lines (loans, contributions, vendor notes):
+   air between the lines instead of a wall of text */
+.spaced>.note{margin-top:.45rem;line-height:1.85}
+.spaced .inln{margin-block:3px}
+.warnbox{background:var(--warn-dim);border:1px solid color-mix(in srgb,var(--warn) 32%,transparent);
+  border-radius:var(--r);padding:.6rem .75rem;font-size:.76rem;color:var(--warn-2)}
+
+/* gifts fast entry */
+.gift-row{display:grid;grid-template-columns:1fr 104px 96px 40px;gap:.5rem;align-items:center;
+  padding:.55rem 0;border-bottom:1px solid var(--line)}
+@media(max-width:600px){
+  .gift-row{grid-template-columns:1fr 92px;grid-template-areas:"who amt" "meta meta";row-gap:.4rem}
+  .gift-row .who{grid-area:who}.gift-row .amt{grid-area:amt}
+  .gift-row .meta{grid-area:meta;display:flex;gap:.5rem;align-items:center}
+  .gift-row .meta select{flex:1}
+}
+.gift-row.done{opacity:.55}
+.check{width:34px;height:34px;border-radius:9px;border:1px solid var(--line-2);
+  display:grid;place-items:center;color:var(--ink-3);flex:none}
+.check[aria-pressed="true"]{background:var(--good);border-color:var(--good);color:#fff}
+
+.stickybar{
+  position:sticky;bottom:calc(72px + env(safe-area-inset-bottom));z-index:30;margin-top:.85rem;
+  background:color-mix(in srgb,var(--bg-elev) 95%,transparent);backdrop-filter:blur(12px);
+  border:1px solid var(--line-2);border-radius:var(--r-lg);padding:.65rem .9rem;
+  display:flex;gap:1rem;flex-wrap:wrap;box-shadow:var(--shadow)
+}
+@media(min-width:860px){.stickybar{bottom:.85rem}}
+.stickybar div{font-size:.72rem;color:var(--ink-3);font-weight:600}
+.stickybar b{display:block;font-size:1.05rem;color:var(--ink);font-variant-numeric:tabular-nums}
+
+details.acc{border:1px solid var(--line);border-radius:var(--r);margin-top:.5rem;background:var(--bg-elev)}
+details.acc>summary{padding:.5rem .7rem;cursor:pointer;font-size:.8rem;font-weight:600;color:var(--brand-2);list-style:none}
+details.acc>summary::-webkit-details-marker{display:none}
+details.acc>div{padding:0 .7rem .7rem;max-height:280px;overflow:auto}
+
+dialog{
+  border:1px solid var(--line-2);background:var(--card);color:var(--ink);
+  border-radius:var(--r-xl);padding:1.1rem;max-width:min(440px,92vw);width:100%;box-shadow:var(--shadow)
+}
+dialog::backdrop{background:rgba(0,0,0,.6);backdrop-filter:blur(3px)}
+dialog h3{font-size:1rem;margin-bottom:.8rem}
+
+.toast{
+  position:fixed;inset-inline:0;bottom:calc(84px + env(safe-area-inset-bottom));z-index:99;
+  display:flex;justify-content:center;pointer-events:none
+}
+.toast span{
+  background:var(--ink);color:var(--bg);padding:.5rem 1rem;border-radius:999px;
+  font-size:.8rem;font-weight:700;box-shadow:var(--shadow);
+  opacity:0;transform:translateY(8px);transition:.2s
+}
+.toast.on span{opacity:1;transform:none}
+@media(min-width:860px){.toast{bottom:1.5rem}}
+
+/* countdown hero */
+.hero{
+  text-align:center;padding:1.5rem 1rem 1.3rem;margin-bottom:.85rem;
+  background:linear-gradient(140deg,var(--brand-dim),transparent 55%),
+             linear-gradient(320deg,rgba(157,123,255,.10),transparent 55%),var(--card);
+  border:1px solid var(--line);border-radius:var(--r-xl);overflow:hidden
+}
+.hero .n{
+  font-size:clamp(4.2rem,24vw,7.5rem);font-weight:900;line-height:1;
+  letter-spacing:-.045em;font-variant-numeric:tabular-nums;
+  background:linear-gradient(90deg,var(--brand),var(--plum),var(--brand-2),var(--brand));
+  background-size:250% 100%;-webkit-background-clip:text;background-clip:text;
+  color:transparent;animation:shimmer 7s linear infinite
+}
+@keyframes shimmer{to{background-position:250% 0}}
+.hero .l{font-size:1.08rem;font-weight:800;margin-top:.25rem}
+.hero .l .beat{display:inline-block;animation:beat 1.5s ease-in-out infinite}
+@keyframes beat{0%,100%{transform:scale(1)}30%{transform:scale(1.22)}}
+.hero .d{font-size:.8rem;color:var(--ink-3);margin-top:.25rem}
+
+.inln{width:70px;display:inline-block;min-height:28px;padding:.15rem .4rem}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">OurMoney<small id="brandSub"></small></div>
+  <div class="countdown" id="countdown"></div>
+  <button class="iconbtn" id="syncPill" style="display:none;font-size:1rem;font-weight:800"
+          title="סנכרון" aria-label="מצב סנכרון"></button>
+  <button class="iconbtn" id="themeBtn" title="מצב תצוגה" aria-label="מצב תצוגה">
+    <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+  </button>
+  <button class="iconbtn" id="dataBtn" title="נתונים וגיבוי" aria-label="נתונים וגיבוי">
+    <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></svg>
+  </button>
+</header>
+
+<nav class="tabs" id="tabs" role="tablist"></nav>
+
+<main class="wrap" id="main"></main>
+
+<nav class="botnav" id="botnav" role="tablist"></nav>
+<div class="toast" id="toast"><span></span></div>
+
+<dialog id="dataDlg">
+  <h3>נתונים וגיבוי</h3>
+  <div class="grid" style="gap:.5rem">
+    <button class="btn btn-o" data-act="export">ייצוא JSON (גיבוי)</button>
+    <button class="btn btn-o" data-act="import">ייבוא JSON</button>
+    <button class="btn btn-o" data-act="restore">שחזור מגיבוי אוטומטי</button>
+    <button class="btn btn-d" data-act="reset">איפוס לנתוני האקסל</button>
+  </div>
+  <p class="note" style="margin-top:.8rem" id="dataMeta"></p>
+  <hr style="border:none;border-top:1px solid var(--line);margin:1rem 0">
+  <h3 style="margin-bottom:.6rem">סנכרון בין מכשירים</h3>
+  <div id="syncPanel"></div>
+  <button class="btn btn-p" style="width:100%;margin-top:.9rem" data-act="close">סגירה</button>
+  <input type="file" id="fileIn" accept="application/json,.json" hidden>
+</dialog>
+
+<dialog id="checkDlg">
+  <h3>צ׳ק דחוי</h3>
+  <div class="grid" style="gap:.6rem">
+    <label class="fld"><span>ספק</span><select id="ckVendor"></select></label>
+    <label class="fld"><span>תיאור</span><input type="text" id="ckName" autocomplete="off"></label>
+    <label class="fld"><span>סכום (₪)</span><input type="number" id="ckAmt" inputmode="numeric"></label>
+    <label class="fld"><span>תאריך פירעון</span><input type="date" id="ckDate"></label>
+    <label style="display:flex;gap:.5rem;align-items:center;font-size:.85rem">
+      <input type="checkbox" id="ckDep" style="width:auto;min-height:0">
+      פיקדון בלבד — לא נספר בסה״כ</label>
+  </div>
+  <div style="display:flex;gap:.5rem;margin-top:.9rem">
+    <button class="btn btn-p" style="flex:1" data-act="check-save">שמירה</button>
+    <button class="btn btn-o" data-act="check-cancel">ביטול</button>
+  </div>
+</dialog>
+
+<dialog id="taskDlg">
+  <h3>משימה חדשה</h3>
+  <div class="grid" style="gap:.6rem">
+    <label class="fld"><span>מה צריך לעשות</span>
+      <input type="text" id="tNew" autocomplete="off"></label>
+    <label class="fld"><span>נושא</span>
+      <input type="text" id="tTopic" list="topicList" autocomplete="off">
+      <datalist id="topicList"></datalist></label>
+    <label class="fld"><span>תאריך יעד</span>
+      <input type="date" id="tDue"></label>
+  </div>
+  <div style="display:flex;gap:.5rem;margin-top:.9rem">
+    <button class="btn btn-p" style="flex:1" data-act="task-save">הוספה</button>
+    <button class="btn btn-o" data-act="task-cancel">ביטול</button>
+  </div>
+</dialog>
+
+<script src="data.js"></script>
+<script>
+"use strict";
+/* ========================================================================== *
+ *  OurMoney — wedding + capital tracker
+ *  State lives in localStorage. Every write goes through Store.update() so
+ *  autosave and backups can never be bypassed.
+ * ========================================================================== */
+
+// Bumped on every publish. Shown in the data dialog so a device running a
+// stale cached copy can be identified instead of guessed at.
+const BUILD='2026-08-02-20';
+
+// Long data notes use " · " as a separator; on screen each part gets its own
+// line so the note reads as a list instead of a dense paragraph.
+const noteLines=s=>esc(s).replace(/ · /g,'<br>');
+const KEY='ourmoney/v1', BACKUP_KEY='ourmoney/backups', THEME_KEY='ourmoney/theme';
+const MAX_BACKUPS=5;
+
+/* ------------------------------------------------------------------ format */
+const nf=new Intl.NumberFormat('he-IL',{maximumFractionDigits:0});
+const money=n=>(n==null||isNaN(n))?'—':'₪'+nf.format(Math.round(n));
+const moneyS=n=>(n==null||isNaN(n))?'—':(n<0?'−₪':'₪')+nf.format(Math.abs(Math.round(n)));
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const todayISO=()=>new Date().toISOString().slice(0,10);
+const dLabel=iso=>{ if(!iso) return '—';
+  const d=new Date(iso+'T00:00:00');
+  return d.toLocaleDateString('he-IL',{day:'numeric',month:'short'}); };
+
+/* ------------------------------------------------------------------- store */
+const Store={
+  state:null, _t:null,
+
+  boot(){
+    let raw=null;
+    try{ raw=localStorage.getItem(KEY); }catch(e){}
+    if(raw){
+      try{ this.state=JSON.parse(raw); }
+      catch(e){ console.error('corrupt state, falling back to seed',e); }
+    }
+    if(!this.state){
+      // No saved state and no data.js — the hosted build always starts here.
+      // Not an error: show the welcome screen and let them import a backup.
+      if(!window.SEED) return false;
+      this.state=structuredClone(window.SEED);
+      this.state.meta.seededAt=new Date().toISOString();
+    }
+    this.migrate();
+    return true;
+  },
+
+  // Fields the app owns but older seeds/exports may not carry.
+  migrate(){
+    const s=this.state;
+    s.meta=s.meta||{}; s.meta.schemaVersion=s.meta.schemaVersion||1;
+    (s.guests||[]).forEach(g=>{
+      g.gift=g.gift||{amount:null,method:null,received:false,date:null,note:null};
+      if(g.gift.amount===undefined) g.gift.amount=null;
+    });
+    (s.vendors||[]).forEach(v=>{
+      v.payments=v.payments||[]; v.coveredAmount=v.coveredAmount||0;
+      // A device that kept Supabase-era state re-uploaded the imported advances
+      // with different ids, doubling every one. The import created exactly one
+      // advance per vendor, so an exact twin of an imported payment is the bug.
+      const seen=new Set();
+      v.payments=v.payments.filter(p=>{
+        if(!p.note||!p.note.includes('יובא מהאקסל')) return true;
+        const k=[p.date,p.amount,p.method,p.note].join('|');
+        if(seen.has(k)) return false;
+        seen.add(k); return true;
+      });
+    });
+    (s.tasks||[]).forEach(t=>{ if(!t.status) t.status='open'; });
+    if(s.capital){
+      if(s.capital.prime==null) s.capital.prime=5.0;
+      if(s.capital.cpi==null)   s.capital.cpi=2.5;
+      ['roei','jordan'].forEach(k=>{
+        const d=s.capital[k]; if(!d) return;
+        d.income=d.income||{gross:null,net:null};
+        d.fixedExpenses=d.fixedExpenses||[];
+        d.fixedIncomes=d.fixedIncomes||[];
+      });
+    }
+  },
+
+  update(fn){
+    const r=fn(this.state);
+    this.saveSoon();
+    if(typeof Sync!=='undefined') Sync.nudge();
+    render();
+    return r;
+  },
+
+  saveSoon(){ clearTimeout(this._t); this._t=setTimeout(()=>this.saveNow(),400); },
+
+  saveNow(){
+    try{ localStorage.setItem(KEY,JSON.stringify(this.state)); }
+    catch(e){
+      // Quota is the realistic failure here: drop backups before losing live data.
+      try{ localStorage.removeItem(BACKUP_KEY); localStorage.setItem(KEY,JSON.stringify(this.state)); toast('שים לב: הגיבויים נמחקו מחוסר מקום'); }
+      catch(e2){ toast('⚠ שמירה נכשלה — ייצא גיבוי עכשיו!'); }
+    }
+  },
+
+  backup(reason){
+    try{
+      const list=JSON.parse(localStorage.getItem(BACKUP_KEY)||'[]');
+      list.unshift({ts:new Date().toISOString(),reason,json:JSON.stringify(this.state)});
+      localStorage.setItem(BACKUP_KEY,JSON.stringify(list.slice(0,MAX_BACKUPS)));
+    }catch(e){ /* quota — backups are best-effort, live data comes first */ }
+  },
+
+  backups(){ try{ return JSON.parse(localStorage.getItem(BACKUP_KEY)||'[]'); }catch(e){ return []; } },
+
+  exportFile(){
+    const blob=new Blob([JSON.stringify(this.state,null,1)],{type:'application/json'});
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download=`ourmoney-${todayISO()}.json`;
+    a.click(); URL.revokeObjectURL(a.href);
+    toast('הגיבוי ירד');
+  },
+
+  importObj(obj){
+    if(!obj||!obj.meta||!obj.guests) throw new Error('קובץ לא תקין');
+    if(obj.meta.schemaVersion!==1) throw new Error('גרסת סכמה לא נתמכת: '+obj.meta.schemaVersion);
+    this.backup('לפני ייבוא');
+    this.state=obj; this.migrate(); this.saveNow(); render();
+    toast('הנתונים יובאו');
+  },
+};
+
+/* ------------------------------------------------------- safe path setter  */
+const ROOTS=new Set(['guests','vendors','income','forecast','tasks','quotes','contacts',
+                     'events','children','brideExpenses','capital','venue','meta']);
+function setPath(path,val){
+  const parts=String(path).split('.');
+  if(!ROOTS.has(parts[0])) throw new Error('bad path root: '+parts[0]);
+  let o=Store.state;
+  for(let i=0;i<parts.length-1;i++){
+    const k=parts[i];
+    o=Array.isArray(o)?o[Number(k)]:o[k];
+    if(o==null) throw new Error('bad path: '+path);
+  }
+  const last=parts[parts.length-1];
+  if(Array.isArray(o)) o[Number(last)]=val; else o[last]=val;
+}
+
+/* ------------------------------------------------------------------- calc  */
+const calc={
+  paidOf:v=>(v.payments||[]).reduce((s,p)=>s+(Number(p.amount)||0),0),
+  remainOf(v){ return (Number(v.total)||0)-this.paidOf(v)-(Number(v.coveredAmount)||0); },
+
+  seatCost(g){
+    const V=Store.state.venue||{};
+    return (g.adults||0)*(Number(V.pricePerPlate)||0)+(g.children||0)*(Number(V.childPlate)||0);
+  },
+  giftNet(g){ return (Number(g.gift?.amount)||0)-this.seatCost(g); },
+
+  totals(){
+    const s=Store.state;
+    const cost=s.vendors.reduce((a,v)=>a+(Number(v.total)||0),0);
+    const paid=s.vendors.reduce((a,v)=>a+this.paidOf(v),0);
+    const covered=s.vendors.reduce((a,v)=>a+(Number(v.coveredAmount)||0),0);
+    const remaining=cost-paid-covered;
+    const income=s.income.reduce((a,i)=>a+(Number(i.received)||0),0);
+    const expected=s.income.reduce((a,i)=>a+(Number(i.expected)||0),0);
+    const gifts=s.guests.reduce((a,g)=>a+(Number(g.gift?.amount)||0),0);
+    const giftsIn=s.guests.reduce((a,g)=>a+(g.gift?.received?(Number(g.gift.amount)||0):0),0);
+    return {cost,paid,covered,remaining,income,expected,gifts,giftsIn,
+            balance:income+gifts-remaining-paid,
+            cash:income+giftsIn-paid};
+  },
+
+  headcount(){
+    const g=Store.state.guests, seats=x=>(x.adults||0);
+    return {
+      rows:g.length,
+      invited:g.reduce((a,x)=>a+seats(x),0),
+      kids:g.reduce((a,x)=>a+(x.children||0),0),
+      confirmed:g.filter(x=>x.rsvp==='confirmed').reduce((a,x)=>a+seats(x),0),
+      declined:g.filter(x=>x.rsvp==='declined').reduce((a,x)=>a+seats(x),0),
+      pending:g.filter(x=>x.rsvp==='pending').reduce((a,x)=>a+seats(x),0),
+      sent:g.filter(x=>x.invitationSent).length,
+    };
+  },
+
+  daysLeft(){
+    const w=new Date(Store.state.meta.weddingDate+'T00:00:00');
+    const t=new Date(); t.setHours(0,0,0,0);
+    return Math.round((w-t)/864e5);
+  },
+};
+
+/* ------------------------------------------------------------------ toast  */
+let toastT;
+function toast(msg){
+  const el=document.getElementById('toast');
+  el.querySelector('span').textContent=msg;
+  el.classList.add('on'); clearTimeout(toastT);
+  toastT=setTimeout(()=>el.classList.remove('on'),2200);
+}
+
+/* ============================================================ view registry */
+const ICONS={
+  dash:'<path d="M3 13h8V3H3zM13 21h8V11h-8zM13 7h8V3h-8zM3 21h8v-4H3z"/>',
+  budget:'<path d="M3 6h18v12H3z"/><circle cx="12" cy="12" r="2.5"/>',
+  guests:'<circle cx="9" cy="8" r="3.2"/><path d="M2.5 20a6.5 6.5 0 0113 0"/><path d="M16 5.5a3 3 0 010 5.6M17.5 20a6 6 0 00-2-4.3"/>',
+  gifts:'<path d="M3 11h18v9H3zM3 7h18v4H3zM12 7v13"/><path d="M12 7S9.5 3 7.5 4.2 9 7 12 7zM12 7s2.5-4 4.5-2.8S15 7 12 7z"/>',
+  tasks:'<path d="M4 6l2 2 3.5-3.5M4 13l2 2 3.5-3.5M4 20l2 2 3.5-3.5M13 6h7M13 14h7M13 21h7"/>',
+  more:'<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>',
+  capital:'<path d="M12 2v20M17 6.5c0-1.9-2.2-3-5-3s-5 1.1-5 3 2.2 2.8 5 3.3 5 1.4 5 3.4-2.2 3.3-5 3.3-5-1.4-5-3.3"/>',
+};
+// `short` keeps the mobile bar to one line per item; `label` is the desktop tab.
+const VIEWS=[
+  {id:'dash',    label:'לוח בקרה', short:'בקרה',  icon:'dash'},
+  {id:'budget',  label:'תקציב',    short:'תקציב', icon:'budget'},
+  {id:'guests',  label:'אורחים',   short:'אורחים',icon:'guests'},
+  {id:'gifts',   label:'מתנות',    short:'מתנות', icon:'gifts'},
+  {id:'tasks',   label:'משימות',   short:'משימות',icon:'tasks'},
+  {id:'capital', label:'הון ונדל״ן',short:'הון',   icon:'capital'},
+  {id:'more',    label:'עוד',      short:'עוד',   icon:'more'},
+];
+let active='dash';
+
+/* UI-only state (filters, search, what-if sliders) — deliberately not persisted. */
+const ui={
+  guestQ:'', guestSide:'', guestGroup:'', guestRsvp:'',
+  giftQ:'', giftOnlyOpen:false, giftSort:'open',
+  budgetView:'actual', taskFilter:'open',
+  // Mirrors capital.prime/cpi; the synced value wins on render (vCapital).
+  prime:5.0, cpi:2.5,
+  calc:{amount:200000,months:120,grace:20,ty:'sp',rt:'pp',spread:0},
+};
+
+function nav(){
+  document.getElementById('tabs').innerHTML=VIEWS.map(v=>
+    `<button role="tab" data-v="${v.id}" aria-selected="${v.id===active}">${v.label}</button>`).join('');
+  document.getElementById('botnav').innerHTML=VIEWS.map(v=>
+    `<button role="tab" data-v="${v.id}" aria-selected="${v.id===active}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"
+           stroke-linecap="round" stroke-linejoin="round">${ICONS[v.icon]}</svg>${v.short}</button>`).join('');
+}
+
+/* Shown when there is no data at all: the hosted build on a fresh phone, or a
+   browser whose storage was cleared. The only way forward is an imported backup. */
+function vWelcome(){
+  return `<div class="card" style="max-width:520px;margin:2rem auto">
+    <div class="card-h"><span class="dot" style="background:var(--brand)"></span>
+      <h2>ברוכים הבאים</h2></div>
+    <p style="margin-bottom:.8rem">אין עדיין נתונים במכשיר הזה.</p>
+    <p class="note" style="margin-bottom:1rem">
+      במחשב פותחים את OurMoney, לוחצים על אייקון מסד הנתונים למעלה ואז
+      <b>ייצוא JSON</b>. שומרים את הקובץ ב־iCloud Drive, ומכאן מייבאים אותו.
+      הנתונים נשמרים רק בדפדפן הזה ולא נשלחים לשום מקום.
+    </p>
+    <button class="btn btn-p" style="width:100%" data-act="import">ייבוא קובץ JSON</button>
+    <p class="note" style="margin-top:.8rem">
+      אחרי הייבוא הכול נשמר אוטומטית — בפעם הבאה שתפתחו, הנתונים כבר יהיו כאן.
+    </p>
+  </div>`;
+}
+
+/* Who the couple are, the date and the venue live in the data, never in the code —
+   this repo is public, so nothing personal may be hardcoded here. */
+const NAMES=()=>{
+  const c=(Store.state&&Store.state.meta&&Store.state.meta.couple)||{};
+  return {bride:c.bride||'בת הזוג', groom:c.groom||'בן הזוג'};
+};
+const dmy=iso=>{ if(!iso) return ''; const [y,m,d]=iso.split('-'); return `${d}.${m}.${y}`; };
+
+/* Wide tables become stacked rows on the phone -- no sideways scrolling. */
+const MOBILE=()=>matchMedia('(max-width:680px)').matches;
+let _wasMob=MOBILE();
+addEventListener('resize',()=>{
+  // Only breakpoint crossings re-render: the iOS keyboard also fires resize,
+  // and re-rendering then would steal focus mid-typing.
+  if(MOBILE()!==_wasMob){ _wasMob=MOBILE(); render(); }
+});
+
+function render(){
+  if(!Store.state){
+    document.getElementById('tabs').innerHTML='';
+    document.getElementById('botnav').innerHTML='';
+    document.getElementById('countdown').textContent='';
+    document.getElementById('brandSub').textContent='';
+    document.getElementById('main').innerHTML=vWelcome();
+    return;
+  }
+  const m=Store.state.meta||{};
+  const n=NAMES();
+  document.getElementById('brandSub').textContent=
+    `${n.groom} & ${n.bride}${m.weddingDate?' · '+dmy(m.weddingDate):''}`;
+  document.title=`OurMoney — ${n.groom} & ${n.bride}`;
+  nav();
+  const d=calc.daysLeft();
+  document.getElementById('countdown').innerHTML =
+    d>0?`<b>${d}</b> ימים<span class="cd-x"> לחתונה</span>` : d===0?'<b>היום!</b> 🎉' : `לפני <b>${-d}</b> ימים`;
+  document.getElementById('main').innerHTML=
+    `<section class="view on">${({dash:vDash,budget:vBudget,guests:vGuests,gifts:vGifts,
+       tasks:vTasks,capital:vCapital,more:vMore})[active]()}</section>`;
+}
+
+/* ==================================================================== DASH  */
+function vDash(){
+  const t=calc.totals(), h=calc.headcount(), V=Store.state.venue||{};
+  const pctPaid=t.cost?Math.min(100,(t.paid+t.covered)/t.cost*100):0;
+  const pctRsvp=h.invited?h.confirmed/h.invited*100:0;
+  const pctDecl=h.invited?h.declined/h.invited*100:0;
+  const giftRows=Store.state.guests.filter(g=>Number(g.gift?.amount)>0).length;
+
+  const due=Store.state.vendors
+    .filter(v=>calc.remainOf(v)>0)
+    .sort((a,b)=>calc.remainOf(b)-calc.remainOf(a));
+
+  const d=calc.daysLeft(), m=Store.state.meta||{};
+  const hero = d>0
+    ? `<div class="n">${d}</div><div class="l">ימים לחתונה <span class="beat">💍</span></div>`
+    : d===0
+    ? `<div class="n">היום!</div><div class="l">מזל טוב <span class="beat">🎉</span></div>`
+    : `<div class="l">נשואים כבר ${-d} ימים <span class="beat">💛</span></div>`;
+
+  return `
+  <div class="hero">${hero}
+    <div class="d">${dmy(m.weddingDate)}${m.venueName?' · '+esc(m.venueName):''}</div>
+  </div>
+
+  <div class="grid g3">
+    ${stat('סה״כ עלות החתונה',money(t.cost),'לפי גיליון כספים','var(--ink)')}
+    ${stat('שולם עד כה',money(t.paid),t.covered?`+ ${money(t.covered)} מכוסה על ידי ההורים`:'','var(--good-2)')}
+    ${stat('נשאר לשלם',money(t.remaining),`${Math.round(pctPaid)}% מהתקציב סגור`,'var(--bad-2)')}
+  </div>
+
+  <div class="card">
+    <div class="card-h"><span class="dot" style="background:var(--brand)"></span>
+      <h2>התקדמות תשלומים</h2>
+      <span class="sp note" dir="ltr">${money(t.paid+t.covered)} / ${money(t.cost)}</span></div>
+    <div class="bar">
+      <i style="width:${t.cost?t.paid/t.cost*100:0}%;background:var(--good)"></i>
+      <i style="width:${t.cost?t.covered/t.cost*100:0}%;background:var(--plum)"></i>
+    </div>
+    <div class="chips" style="margin-top:.6rem">
+      <span class="chip sm"><span class="dot" style="background:var(--good);display:inline-block;margin-inline-end:4px"></span>שולם ${money(t.paid)}</span>
+      <span class="chip sm"><span class="dot" style="background:var(--plum);display:inline-block;margin-inline-end:4px"></span>מכוסה ${money(t.covered)}</span>
+      <span class="chip sm">נשאר ${money(t.remaining)}</span>
+    </div>
+  </div>
+
+  <div class="grid g3">
+    ${stat('נכנס לחשבון',money(t.income),Store.state.income.map(i=>i.source).join(' · '),'var(--good-2)')}
+    ${stat('מתנות שנרשמו',money(t.gifts),`${giftRows} אורחים · ${money(t.giftsIn)} כבר בידיים`,'var(--brand-2)')}
+    ${stat('מאזן צפוי',moneyS(t.balance),
+       t.balance>=0?'מכסה את כל מה שנשאר':'חסר כדי לסגור את החתונה',
+       t.balance>=0?'var(--good-2)':'var(--bad-2)')}
+  </div>
+
+  <div class="card">
+    <div class="card-h"><span class="dot" style="background:var(--bad)"></span>
+      <h2>תשלומים פתוחים</h2><span class="sp note">${due.length} ספקים</span></div>
+    ${due.length?due.slice(0,7).map(v=>`
+      <div class="row">
+        <div class="main">
+          <div class="name">${esc(v.name)}</div>
+          <div class="sub">${esc(v.dueWhen||'מועד לא נקבע')}</div>
+        </div>
+        <div class="val" style="color:var(--bad-2)">${money(calc.remainOf(v))}</div>
+      </div>`).join(''):'<div class="empty">אין תשלומים פתוחים 🎉</div>'}
+    ${due.length>7?`<div class="note" style="margin-top:.5rem">ועוד ${due.length-7} — ראו מסך תקציב</div>`:''}
+  </div>
+
+  ${checksCard(false)}
+
+  <div class="card">
+    <div class="card-h"><span class="dot" style="background:var(--plum)"></span><h2>אישורי הגעה</h2>
+      <span class="sp note">${h.confirmed} מתוך ${h.invited} מוזמנים</span></div>
+    <div class="bar">
+      <i style="width:${pctRsvp}%;background:var(--good)"></i>
+      <i style="width:${pctDecl}%;background:var(--bad)"></i>
+    </div>
+    <div class="grid g4" style="margin-top:.7rem">
+      ${mini('מוזמנים',h.invited)}${mini('אישרו',h.confirmed,'var(--good-2)')}
+      ${mini('לא מגיעים',h.declined,'var(--bad-2)')}${mini('ממתינים',h.pending,'var(--warn-2)')}
+    </div>
+    <p class="note" style="margin-top:.6rem">
+      ${h.rows} שורות הזמנה · ${h.kids} ילדים · הזמנות שנשלחו: ${h.sent}
+      ${V.minPlates?` · התחייבות לאולם: ${V.minPlates} מנות`:''}
+    </p>
+  </div>`;
+}
+/* Post-dated checks live on their vendor (v.checks) so every build's
+   per-vendor merge carries them; this card aggregates them all. */
+function checksAll(){
+  return Store.state.vendors.flatMap((v,vi)=>(v.checks||[]).map((c,ci)=>({v,vi,c,ci})))
+    .sort((a,b)=>(a.c.dueDate||'9999').localeCompare(b.c.dueDate||'9999'));
+}
+function checksCard(edit){
+  const list=checksAll();
+  if(!list.length&&!edit) return '';
+  const t0=new Date(todayISO()+'T00:00:00');
+  const rel=d=>{ if(!d) return 'ללא תאריך';
+    const n=Math.round((new Date(d+'T00:00:00')-t0)/864e5);
+    return n>0?`ירד בעוד ${n} ימים`:n===0?'ירד היום':`ירד לפני ${-n} ימים`; };
+  const tot=list.filter(x=>!x.c.deposit).reduce((a,x)=>a+(x.c.amount||0),0);
+  const dep=list.filter(x=>x.c.deposit).reduce((a,x)=>a+(x.c.amount||0),0);
+  return `<div class="card">
+    <div class="card-h"><span class="dot" style="background:var(--warn)"></span><h2>צ׳קים דחויים</h2>
+      <span class="sp note">${money(tot)}${dep?` + פיקדון ${money(dep)}`:''}</span></div>
+    ${list.map(({v,vi,c,ci})=>`<div class="row" style="padding-block:.75rem">
+      <div class="main">
+        <div class="name">${esc(c.name||v.name)}</div>
+        <div class="sub">${esc(v.name)}${c.payee?'<br>לפקודת '+esc(c.payee):''}<br>${rel(c.dueDate)}</div>
+      </div>
+      ${c.deposit?'<span class="tag t-warn">פיקדון</span>':''}
+      <span class="tag t-mute">${dLabel(c.dueDate)}</span>
+      <div class="val">${money(c.amount)}</div>
+      ${edit?`<button class="btn btn-d sm" data-delcheck="${vi}.${ci}">מחיקה</button>`:''}
+    </div>`).join('')||'<div class="empty">אין צ׳קים רשומים</div>'}
+    ${edit?`<button class="btn btn-o sm" style="margin-top:.5rem" data-act="check-new">+ צ׳ק</button>`:''}
+  </div>`;
+}
+
+const stat=(k,v,s,c)=>`<div class="stat" style="--c:${c||'var(--brand)'}">
+  <div class="k">${k}</div><div class="v">${v}</div>${s?`<div class="s">${esc(s)}</div>`:''}</div>`;
+const mini=(k,v,c)=>`<div><div class="note">${k}</div>
+  <div style="font-size:1.1rem;font-weight:800;color:${c||'var(--ink)'};font-variant-numeric:tabular-nums">${nf.format(v)}</div></div>`;
+
+/* ================================================================== BUDGET  */
+function vBudget(){
+  const t=calc.totals();
+  return ui.budgetView==='forecast'?budgetForecast(t):budgetActual(t);
+}
+
+function budgetToggle(){
+  return `<div class="chips" style="margin-bottom:.85rem">
+    <button class="chip" data-bview="actual" aria-pressed="${ui.budgetView==='actual'}">בפועל (כספים)</button>
+    <button class="chip" data-bview="forecast" aria-pressed="${ui.budgetView==='forecast'}">תחזית מול בפועל</button>
+    <button class="chip" data-bview="income" aria-pressed="${ui.budgetView==='income'}">הכנסות</button>
+  </div>`;
+}
+
+function budgetActual(t){
+  if(ui.budgetView==='income') return budgetToggle()+budgetIncome(t);
+  const stOf=(v,paid,rem)=> v.total==null ? '<span class="tag t-mute">אין מחיר</span>'
+             : rem<=0 && v.coveredAmount ? '<span class="tag t-brand">מכוסה</span>'
+             : rem<=0 ? '<span class="tag t-good">שולם</span>'
+             : paid>0 ? '<span class="tag t-warn">מקדמה</span>'
+             : '<span class="tag t-bad">פתוח</span>';
+
+  const rows=Store.state.vendors.map((v,i)=>{
+    const paid=calc.paidOf(v), rem=calc.remainOf(v), st=stOf(v,paid,rem);
+    return `<tr>
+      <td><div style="font-weight:600">${esc(v.name)}
+            ${(v.checks||[]).length?` <span class="tag t-brand">${v.checks.length} צ׳קים</span>`:''}</div>
+          ${v.notes?`<div class="sub note" style="max-width:340px">${noteLines(v.notes)}</div>`:''}</td>
+      <td class="num"><input type="number" class="cellnum" data-path="vendors.${i}.total"
+            value="${v.total??''}" style="width:104px" inputmode="numeric"></td>
+      <td class="num" style="color:var(--good-2)">${money(paid)}</td>
+      <td class="num" style="color:${rem>0?'var(--bad-2)':'var(--ink-3)'}">${money(rem)}</td>
+      <td>${v.coveredAmount?`<span class="tag t-brand">${money(v.coveredAmount)} · ${esc(v.coveredBy||'')}</span>`:'—'}</td>
+      <td class="note">${esc(v.dueWhen||'—')}</td>
+      <td>${st}</td>
+      <td class="num"><button class="btn btn-o sm" data-pay="${i}">+ תשלום</button></td>
+    </tr>`;
+  }).join('');
+
+  const mrows=Store.state.vendors.map((v,i)=>{
+    const paid=calc.paidOf(v), rem=calc.remainOf(v), st=stOf(v,paid,rem);
+    return `<div class="grow">
+      <div style="display:flex;gap:.5rem;align-items:baseline;flex-wrap:wrap">
+        <b>${esc(v.name)}</b>${st}
+        ${(v.checks||[]).length?`<span class="tag t-brand">${v.checks.length} צ׳קים נמסרו</span>`:''}
+        <span class="sp note" style="margin-inline-start:auto">${esc(v.dueWhen||'')}</span>
+      </div>
+      ${v.notes?`<div class="sub note" style="margin-top:.35rem">${noteLines(v.notes)}</div>`:''}
+      ${v.coveredAmount?`<div class="sub" style="margin-top:.35rem"><span class="tag t-brand">${money(v.coveredAmount)} · ${esc(v.coveredBy||'')}</span></div>`:''}
+      <div style="display:flex;gap:.55rem;align-items:center;margin-top:.45rem;flex-wrap:wrap">
+        <label class="note" style="display:flex;align-items:center;gap:.3rem">עלות
+          <input type="number" class="cellnum inln" data-path="vendors.${i}.total"
+            value="${v.total??''}" style="width:92px" inputmode="numeric"></label>
+        <span class="note">שולם <b style="color:var(--good-2)">${money(paid)}</b></span>
+        <span class="note">נשאר <b style="color:${rem>0?'var(--bad-2)':'var(--ink-3)'}">${money(rem)}</b></span>
+        <button class="btn btn-o sm" data-pay="${i}" style="margin-inline-start:auto">+ תשלום</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  return budgetToggle()+`
+  <div class="grid g4" style="margin-bottom:.85rem">
+    ${stat('עלות',money(t.cost),'','var(--ink)')}
+    ${stat('שולם',money(t.paid),'','var(--good-2)')}
+    ${stat('מכוסה',money(t.covered),'הורים','var(--plum)')}
+    ${stat('נשאר',money(t.remaining),'','var(--bad-2)')}
+  </div>
+
+  ${t.covered?`<div class="warnbox" style="margin-bottom:.85rem">
+    <b>שימו לב:</b> ${money(t.covered)} מתוך התקציב מסומנים כמכוסים על ידי גורם אחר
+    (${Store.state.vendors.filter(v=>v.coveredAmount).map(v=>esc(v.name)).join(', ')}).
+    לכן «נשאר לשלם» הוא ${money(t.remaining)} ולא ${money(t.cost-t.paid)}.
+  </div>`:''}
+
+  <div class="card">
+    <div class="card-h"><span class="dot" style="background:var(--brand)"></span><h2>ספקים</h2>
+      <span class="sp note">לחצו על סכום כדי לערוך</span></div>
+    ${MOBILE()?mrows:`<div class="tscroll"><table>
+      <thead><tr><th>ספק</th><th class="num">עלות</th><th class="num">שולם</th>
+        <th class="num">נשאר</th><th>מכוסה</th><th>מתי</th><th>סטטוס</th><th></th></tr></thead>
+      <tbody>${rows}
+        <tr class="tot"><td>סה״כ</td><td class="num">${money(t.cost)}</td>
+          <td class="num">${money(t.paid)}</td><td class="num">${money(t.remaining)}</td>
+          <td>${money(t.covered)}</td><td colspan="3"></td></tr>
+      </tbody>
+    </table></div>`}
+  </div>
+
+  ${checksCard(true)}
+
+  <div class="card">
+    <div class="card-h"><span class="dot" style="background:var(--good)"></span><h2>היסטוריית תשלומים</h2></div>
+    ${Store.state.vendors.flatMap((v,i)=>(v.payments||[]).map((p,j)=>({v,p,i,j})))
+      .sort((a,b)=>(b.p.date||'').localeCompare(a.p.date||''))
+      .map(({v,p,i,j})=>`<div class="row">
+        <div class="main"><div class="name">${esc(v.name)}</div>
+          <div class="sub">${p.date?dLabel(p.date):'ללא תאריך'}${p.note?' · '+esc(p.note):''}${p.method?' · '+esc(p.method):''}</div></div>
+        <div class="val" style="color:var(--good-2)">${money(p.amount)}</div>
+        <button class="btn btn-d sm" data-delpay="${i}.${j}">מחיקה</button>
+      </div>`).join('')||'<div class="empty">אין תשלומים רשומים</div>'}
+  </div>`;
+}
+
+function budgetIncome(t){
+  const rows=Store.state.income.map((inc,i)=>`<tr>
+    <td style="font-weight:600">${esc(inc.source)}</td>
+    <td class="num"><input type="number" class="cellnum" data-path="income.${i}.received"
+        value="${inc.received??''}" style="width:110px" inputmode="numeric"></td>
+    <td class="num"><input type="number" class="cellnum" data-path="income.${i}.expected"
+        value="${inc.expected??''}" style="width:110px" inputmode="numeric"></td>
+    <td class="num" style="font-weight:700">${money((inc.received||0)+(inc.expected||0))}</td>
+  </tr>`).join('');
+
+  const mrows=Store.state.income.map((inc,i)=>`<div class="grow">
+    <b>${esc(inc.source)}</b>
+    <div style="display:flex;gap:.55rem;margin-top:.4rem">
+      <label class="fld" style="flex:1"><span>נכנס</span>
+        <input type="number" class="cellnum" data-path="income.${i}.received"
+          value="${inc.received??''}" inputmode="numeric"></label>
+      <label class="fld" style="flex:1"><span>עתיד להיכנס</span>
+        <input type="number" class="cellnum" data-path="income.${i}.expected"
+          value="${inc.expected??''}" inputmode="numeric"></label>
+    </div>
+  </div>`).join('');
+
+  const fi=Store.state.forecastIncome||[];
+  return `
+  <div class="grid g3" style="margin-bottom:.85rem">
+    ${stat('נכנס לחשבון',money(t.income),'','var(--good-2)')}
+    ${stat('עתיד להיכנס',money(t.expected),'','var(--warn-2)')}
+    ${stat('מתנות שנרשמו',money(t.gifts),'','var(--brand-2)')}
+  </div>
+  <div class="card">
+    <div class="card-h"><span class="dot" style="background:var(--good)"></span><h2>הכנסות מהמשפחה</h2></div>
+    ${MOBILE()?mrows:`<div class="tscroll"><table>
+      <thead><tr><th>מקור</th><th class="num">נכנס</th><th class="num">עתיד להיכנס</th><th class="num">סה״כ</th></tr></thead>
+      <tbody>${rows}<tr class="tot"><td>סה״כ</td><td class="num">${money(t.income)}</td>
+        <td class="num">${money(t.expected)}</td><td class="num">${money(t.income+t.expected)}</td></tr></tbody>
+    </table></div>`}
+  </div>
+  ${fi.length?`<div class="card">
+    <div class="card-h"><span class="dot" style="background:var(--warn)"></span><h2>סתירה מול גיליון תחזיות</h2></div>
+    <div class="warnbox">גיליון «תחזיות» רשם מקורות אחרים:
+      ${fi.map(f=>`${esc(f.source)} ${money(f.amount)}`).join(' · ')}
+      — סה״כ ${money(fi.reduce((a,f)=>a+(f.amount||0),0))}.
+      גיליון «כספים» עדכני יותר ולכן הוא המקור הקובע.</div>
+  </div>`:''}`;
+}
+
+function budgetForecast(t){
+  const byCat={};
+  (Store.state.forecast||[]).forEach(f=>{ (byCat[f.category||'ללא קטגוריה'] ||= []).push(f); });
+  const fTotal=(Store.state.forecast||[]).reduce((a,f)=>a+(f.amount||0),0);
+
+  return budgetToggle()+`
+  <div class="grid g3" style="margin-bottom:.85rem">
+    ${stat('תחזית מקורית',money(fTotal),'גיליון תחזיות','var(--plum)')}
+    ${stat('בפועל',money(t.cost),'גיליון כספים','var(--ink)')}
+    ${stat('פער',moneyS(t.cost-fTotal),t.cost>fTotal?'יקר מהתחזית':'זול מהתחזית',
+      t.cost>fTotal?'var(--bad-2)':'var(--good-2)')}
+  </div>
+  <div class="warnbox" style="margin-bottom:.85rem">
+    שתי התחזיות חיו במקביל באקסל. «כספים» הוא הספר הפעיל; «תחזיות» נשמר כאן להשוואה בלבד
+    ואינו נכנס לחישובים. הנוסחאות «סה״כ שקיבלנו» ו«סה״כ רווח» שם היו שבורות (#REF!) —
+    האפליקציה מחשבת אותן מחדש ממסך המתנות.
+  </div>
+  ${Object.entries(byCat).map(([cat,items])=>`
+    <div class="card">
+      <div class="card-h"><span class="dot" style="background:var(--plum)"></span><h2>${esc(cat)}</h2>
+        <span class="sp note">${money(items.reduce((a,f)=>a+(f.amount||0),0))}</span></div>
+      ${items.map(f=>`<div class="row">
+        <div class="main"><div class="name">${esc(f.item)}</div>
+          ${f.note?`<div class="sub">${esc(f.note)}</div>`:''}</div>
+        <div class="val">${f.amount==null?'<span class="note">לא תומחר</span>':money(f.amount)}</div>
+      </div>`).join('')}
+    </div>`).join('')}`;
+}
+
+/* ================================================================== GUESTS  */
+function guestGroups(){
+  return [...new Set(Store.state.guests.map(g=>g.group).filter(Boolean))].sort();
+}
+function filteredGuests(q,side,group,rsvp){
+  const term=q.trim().toLowerCase();
+  return Store.state.guests.filter(g=>{
+    if(side && g.side!==side && g.list!==side) return false;
+    if(group && g.group!==group) return false;
+    if(rsvp && g.rsvp!==rsvp) return false;
+    if(!term) return true;
+    return (g.name||'').toLowerCase().includes(term)
+        || (g.phone||'').includes(term)
+        || (g.group||'').toLowerCase().includes(term);
+  });
+}
+
+function vGuests(){
+  const h=calc.headcount();
+  const list=filteredGuests(ui.guestQ,ui.guestSide,ui.guestGroup,ui.guestRsvp);
+  const shown=list.reduce((a,g)=>a+(g.adults||0),0);
+
+  const vsvg='<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"/></svg>';
+  const rsvpSel=(i,g,style)=>`<select data-rsvp="${i}" style="${style}">
+          <option value="pending"   ${g.rsvp==='pending'?'selected':''}>ממתין</option>
+          <option value="confirmed" ${g.rsvp==='confirmed'?'selected':''}>מגיע</option>
+          <option value="declined"  ${g.rsvp==='declined'?'selected':''}>לא מגיע</option>
+        </select>`;
+  const sideTag=g=>`<span class="tag ${g.list==='חברים'?'t-brand':g.side==='כלה'?'t-warn':'t-good'}">${esc(g.side||g.list)}</span>`;
+
+  const rows=list.map(g=>{
+    const i=Store.state.guests.indexOf(g);
+    return `<tr>
+      <td>
+        <div style="font-weight:600">${esc(g.name)}</div>
+        <div class="sub note">${esc(g.group||'—')}${g.phone?` · <span dir="ltr">${esc(g.phone)}</span>`:''}</div>
+        ${g.notes?`<div class="sub note" style="color:var(--warn-2)">${esc(g.notes)}</div>`:''}
+      </td>
+      <td class="num">${g.adults||0}${g.children?`<span class="note"> +${g.children}👶</span>`:''}</td>
+      <td>${sideTag(g)}</td>
+      <td><button class="check" data-inv="${i}" aria-pressed="${!!g.invitationSent}" title="נשלחה הזמנה">${vsvg}</button></td>
+      <td>${rsvpSel(i,g,'width:110px')}</td>
+      <td class="num">${g.gift?.amount?money(g.gift.amount):'<span class="note">—</span>'}</td>
+    </tr>`;
+  }).join('');
+
+  const mrows=list.map(g=>{
+    const i=Store.state.guests.indexOf(g);
+    return `<div class="grow">
+      <div style="display:flex;align-items:center;gap:.5rem">
+        <div style="flex:1;min-width:0">
+          <div class="name" style="font-weight:600">${esc(g.name)}
+            <span class="note">· ${g.adults||0}${g.children?` +${g.children}👶`:''}</span></div>
+          <div class="sub note">${esc(g.group||'—')}${g.phone?` · <span dir="ltr">${esc(g.phone)}</span>`:''}</div>
+          ${g.notes?`<div class="sub note" style="color:var(--warn-2)">${esc(g.notes)}</div>`:''}
+        </div>
+        ${sideTag(g)}
+      </div>
+      <div style="display:flex;align-items:center;gap:.55rem;margin-top:.45rem">
+        <button class="check" data-inv="${i}" aria-pressed="${!!g.invitationSent}" title="נשלחה הזמנה">${vsvg}</button>
+        ${rsvpSel(i,g,'flex:1;min-height:34px')}
+        <span class="val" style="min-width:56px;text-align:end">${g.gift?.amount?money(g.gift.amount):'<span class="note">—</span>'}</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  return `
+  <div class="grid g4" style="margin-bottom:.85rem">
+    ${stat('מוזמנים',nf.format(h.invited),`${h.rows} שורות · ${h.kids} ילדים`,'var(--ink)')}
+    ${stat('אישרו',nf.format(h.confirmed),'','var(--good-2)')}
+    ${stat('לא מגיעים',nf.format(h.declined),'','var(--bad-2)')}
+    ${stat('ממתינים',nf.format(h.pending),'','var(--warn-2)')}
+  </div>
+
+  <div class="card">
+    <div class="search" style="margin-bottom:.6rem">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      <input type="search" id="guestQ" placeholder="חיפוש שם, טלפון או קבוצה…" value="${esc(ui.guestQ)}">
+    </div>
+    <div class="chips" style="margin-bottom:.5rem">
+      <button class="chip" data-gside="" aria-pressed="${!ui.guestSide}">הכל</button>
+      <button class="chip" data-gside="כלה" aria-pressed="${ui.guestSide==='כלה'}">צד כלה</button>
+      <button class="chip" data-gside="חתן" aria-pressed="${ui.guestSide==='חתן'}">צד חתן</button>
+      <button class="chip" data-gside="חברים" aria-pressed="${ui.guestSide==='חברים'}">חברים</button>
+      <button class="chip" data-grsvp="confirmed" aria-pressed="${ui.guestRsvp==='confirmed'}">רק מאושרים</button>
+      <button class="chip" data-grsvp="pending" aria-pressed="${ui.guestRsvp==='pending'}">רק ממתינים</button>
+    </div>
+    <select id="guestGroup" style="max-width:280px">
+      <option value="">כל הקבוצות</option>
+      ${guestGroups().map(x=>`<option ${ui.guestGroup===x?'selected':''}>${esc(x)}</option>`).join('')}
+    </select>
+  </div>
+
+  <div class="card">
+    <div class="card-h"><span class="dot" style="background:var(--brand)"></span><h2>רשימת אורחים</h2>
+      <span class="sp note">${list.length} שורות · ${shown} אנשים</span></div>
+    ${!list.length?'<div class="empty">לא נמצאו אורחים</div>'
+      :MOBILE()?mrows
+      :`<div class="tscroll"><table>
+      <thead><tr><th>שם</th><th class="num">כמות</th><th>צד</th><th>הזמנה</th><th>הגעה</th><th class="num">מתנה</th></tr></thead>
+      <tbody>${rows}</tbody></table></div>`}
+  </div>`;
+}
+
+/* =================================================================== GIFTS  */
+function vGifts(){
+  const V=Store.state.venue||{}, t=calc.totals();
+  const term=ui.giftQ.trim().toLowerCase();
+  let list=Store.state.guests.filter(g=>
+    !term || (g.name||'').toLowerCase().includes(term) || (g.group||'').toLowerCase().includes(term));
+  if(ui.giftOnlyOpen) list=list.filter(g=>!g.gift?.received);
+
+  list=[...list].sort((a,b)=>{
+    if(ui.giftSort==='open'){
+      const d=(a.gift?.received?1:0)-(b.gift?.received?1:0); if(d) return d;
+      return (b.gift?.amount||0)-(a.gift?.amount||0);
+    }
+    if(ui.giftSort==='amount') return (b.gift?.amount||0)-(a.gift?.amount||0);
+    if(ui.giftSort==='net')    return calc.giftNet(b)-calc.giftNet(a);
+    return (a.name||'').localeCompare(b.name||'','he');
+  });
+
+  const withGift=Store.state.guests.filter(g=>Number(g.gift?.amount)>0);
+  const netTotal=withGift.reduce((a,g)=>a+calc.giftNet(g),0);
+  const avg=withGift.length?t.gifts/withGift.length:0;
+
+  const rows=list.map(g=>{
+    const i=Store.state.guests.indexOf(g);
+    const net=calc.giftNet(g), has=Number(g.gift?.amount)>0;
+    return `<div class="gift-row${g.gift?.received?' done':''}">
+      <div class="who">
+        <div class="name" style="font-weight:600">${esc(g.name)}</div>
+        <div class="sub note">${g.adults||0} מקומות · עלות ${money(calc.seatCost(g))}
+          ${has?` · <b style="color:${net>=0?'var(--good-2)':'var(--bad-2)'}">${moneyS(net)}</b>`:''}</div>
+      </div>
+      <div class="amt"><input type="number" inputmode="numeric" placeholder="₪"
+        class="giftamt" data-gi="${i}" value="${g.gift?.amount??''}"></div>
+      <div class="meta">
+        <select data-gm="${i}">
+          <option value="" ${!g.gift?.method?'selected':''}>אמצעי</option>
+          <option value="cash"     ${g.gift?.method==='cash'?'selected':''}>מזומן</option>
+          <option value="check"    ${g.gift?.method==='check'?'selected':''}>צ׳ק</option>
+          <option value="bit"      ${g.gift?.method==='bit'?'selected':''}>ביט</option>
+          <option value="transfer" ${g.gift?.method==='transfer'?'selected':''}>העברה</option>
+        </select>
+        <button class="check" data-gr="${i}" aria-pressed="${!!g.gift?.received}" title="התקבל">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"/></svg>
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+
+  return `
+  <div class="grid g4" style="margin-bottom:.85rem">
+    ${stat('סה״כ מתנות',money(t.gifts),`${withGift.length} אורחים`,'var(--brand-2)')}
+    ${stat('כבר בידיים',money(t.giftsIn+t.income),
+       `${money(t.income)} מההורים + ${money(t.giftsIn)} מתנות שסומנו`,'var(--good-2)')}
+    ${stat('ממוצע למעטפה',money(avg),`מנה: ${money(V.pricePerPlate)}`,'var(--ink)')}
+    ${stat('רווח מול עלות מקום',moneyS(netTotal),'רק אורחים שנרשמה להם מתנה',
+       netTotal>=0?'var(--good-2)':'var(--bad-2)')}
+  </div>
+
+  <div class="card">
+    <div class="search" style="margin-bottom:.6rem">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      <input type="search" id="giftQ" placeholder="חיפוש אורח…" value="${esc(ui.giftQ)}">
+    </div>
+    <div class="chips">
+      <button class="chip" data-gonly aria-pressed="${ui.giftOnlyOpen}">רק שטרם התקבלו</button>
+      <button class="chip" data-gsort="open"   aria-pressed="${ui.giftSort==='open'}">פתוחים קודם</button>
+      <button class="chip" data-gsort="amount" aria-pressed="${ui.giftSort==='amount'}">לפי סכום</button>
+      <button class="chip" data-gsort="net"    aria-pressed="${ui.giftSort==='net'}">לפי רווח</button>
+      <button class="chip" data-gsort="name"   aria-pressed="${ui.giftSort==='name'}">לפי שם</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-h"><span class="dot" style="background:var(--brand)"></span><h2>רישום מתנות</h2>
+      <span class="sp note">${list.length} אורחים</span></div>
+    ${rows||'<div class="empty">לא נמצאו אורחים</div>'}
+  </div>
+
+  <div class="stickybar">
+    <div>נרשם<b>${money(t.gifts)}</b></div>
+    <div>התקבל<b style="color:var(--good-2)">${money(t.giftsIn)}</b></div>
+    <div>נשאר לשלם<b style="color:var(--bad-2)">${money(t.remaining)}</b></div>
+    <div>מאזן<b style="color:${t.balance>=0?'var(--good-2)':'var(--bad-2)'}">${moneyS(t.balance)}</b></div>
+  </div>`;
+}
+
+/* =================================================================== TASKS  */
+function vTasks(){
+  const all=Store.state.tasks||[];
+  const today=todayISO();
+  let list=all;
+  if(ui.taskFilter==='open') list=all.filter(t=>t.status!=='done');
+  if(ui.taskFilter==='done') list=all.filter(t=>t.status==='done');
+  if(ui.taskFilter==='soon') list=all.filter(t=>t.status!=='done'&&t.dueDate&&t.dueDate<=addDays(today,14));
+
+  const byTopic={};
+  list.forEach(t=>{ (byTopic[t.topic||'כללי'] ||= []).push(t); });
+  Object.values(byTopic).forEach(a=>a.sort((x,y)=>(x.dueDate||'9999').localeCompare(y.dueDate||'9999')));
+
+  const open=all.filter(t=>t.status!=='done').length;
+  const overdue=all.filter(t=>t.status!=='done'&&t.dueDate&&t.dueDate<today).length;
+
+  return `
+  <div class="grid g4" style="margin-bottom:.85rem">
+    ${stat('סה״כ משימות',all.length,'','var(--ink)')}
+    ${stat('פתוחות',open,'','var(--warn-2)')}
+    ${stat('הושלמו',all.length-open,'','var(--good-2)')}
+    ${stat('באיחור',overdue,'עבר תאריך היעד','var(--bad-2)')}
+  </div>
+  <div class="card">
+    <div class="chips">
+      <button class="chip" data-tf="open" aria-pressed="${ui.taskFilter==='open'}">פתוחות</button>
+      <button class="chip" data-tf="soon" aria-pressed="${ui.taskFilter==='soon'}">14 הימים הקרובים</button>
+      <button class="chip" data-tf="done" aria-pressed="${ui.taskFilter==='done'}">הושלמו</button>
+      <button class="chip" data-tf="all"  aria-pressed="${ui.taskFilter==='all'}">הכל</button>
+      <button class="chip" data-act="task-new"
+        style="background:var(--brand);border-color:var(--brand);color:#fff">+ משימה חדשה</button>
+    </div>
+    <p class="note" style="margin-top:.6rem">
+      תאריכי היעד מחושבים מתאריך החתונה (${Store.state.meta.weddingDate}) פחות «כמה ימים לפני האירוע»,
+      כי התאריכים המקוריים בגיליון «תכנון» היו של תבנית משנת 2018.
+    </p>
+  </div>
+  ${Object.keys(byTopic).length?Object.entries(byTopic).map(([topic,items])=>`
+    <div class="card">
+      <div class="card-h"><span class="dot" style="background:var(--brand)"></span><h2>${esc(topic)}</h2>
+        <span class="sp note">${items.length}</span></div>
+      ${items.map(t=>{
+        const idx=all.indexOf(t);
+        const late=t.status!=='done'&&t.dueDate&&t.dueDate<today;
+        return `<div class="row">
+          <button class="check" data-td="${idx}" aria-pressed="${t.status==='done'}">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"/></svg></button>
+          <div class="main">
+            <div class="name" style="${t.status==='done'?'text-decoration:line-through;color:var(--ink-3)':''}">${esc(t.title)}</div>
+            <div class="sub">${t.owner?esc(t.owner)+' · ':''}${esc(t.source)}${t.notes?' · '+esc(t.notes):''}</div>
+          </div>
+          ${t.dueDate?`<span class="tag ${late?'t-bad':'t-mute'}">${dLabel(t.dueDate)}</span>`:''}
+        </div>`;}).join('')}
+    </div>`).join(''):'<div class="card"><div class="empty">אין משימות בקטגוריה הזו</div></div>'}`;
+}
+function addDays(iso,n){ const d=new Date(iso+'T00:00:00'); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); }
+
+/* ==================================================================== MORE  */
+function vMore(){
+  const s=Store.state;
+  const ev=(s.events||[])[0];
+  return `
+  <div class="card">
+    <div class="card-h"><span class="dot" style="background:var(--warn)"></span><h2>השוואת הצעות מחיר</h2></div>
+    ${(s.quotes||[]).map(q=>`<div style="padding:.6rem 0;border-bottom:1px solid var(--line)">
+      <div style="display:flex;gap:.5rem;align-items:baseline">
+        <b>${esc(q.name)}</b><span class="tag t-mute">${esc(q.category||'')}</span>
+        <span class="sp" style="margin-inline-start:auto;font-weight:700">${q.cost!=null?money(q.cost):esc(q.costText||'—')}</span>
+      </div>
+      ${q.advance?`<div class="note">מקדמה: ${money(q.advance)}</div>`:''}
+      ${q.pros?`<div class="note" style="color:var(--good-2)">✓ ${esc(q.pros)}</div>`:''}
+      ${q.cons?`<div class="note" style="color:var(--bad-2)">✗ ${esc(q.cons)}</div>`:''}
+    </div>`).join('')||'<div class="empty">אין הצעות</div>'}
+  </div>
+
+  ${ev?`<div class="card">
+    <div class="card-h"><span class="dot" style="background:var(--plum)"></span><h2>${esc(ev.name)} · ${dLabel(ev.date)}</h2>
+      <span class="sp note">${ev.attendees.length} מוזמנות</span></div>
+    ${(ev.tasks||[]).map(t=>`<div class="row"><div class="main"><div class="name">${esc(t.title)}</div></div>
+      <span class="tag ${t.done?'t-good':'t-mute'}">${t.done?'בוצע':'פתוח'}</span></div>`).join('')}
+    <details class="acc"><summary>רשימת המוזמנות (${ev.attendees.length})</summary><div>
+      ${ev.attendees.map(a=>`<div class="row"><div class="main"><div class="name">${esc(a.name)}</div>
+        <div class="sub">${esc(a.relation||'')}</div></div>
+        ${a.confirmed?'<span class="tag t-good">אישרה</span>':''}</div>`).join('')}
+    </div></details>
+  </div>`:''}
+
+  <div class="card">
+    <div class="card-h"><span class="dot" style="background:var(--good)"></span><h2>אנשי קשר — ספקים</h2></div>
+    ${(s.contacts||[]).map(c=>`<div class="row">
+      <div class="main"><div class="name">${esc(c.role)}</div>
+        <div class="sub">${esc(c.name||'טרם נקבע')}</div></div>
+      ${c.phone?`<a class="val" dir="ltr" href="tel:${esc(c.phone)}">${esc(c.phone)}</a>`:'<span class="note">—</span>'}
+    </div>`).join('')||'<div class="empty">אין אנשי קשר</div>'}
+  </div>
+
+  <div class="card">
+    <div class="card-h"><span class="dot" style="background:var(--brand)"></span><h2>הוצאות כלה</h2>
+      <span class="sp note">${money((s.brideExpenses||[]).reduce((a,b)=>a+(b.quote||0),0))}</span></div>
+    ${(s.brideExpenses||[]).map((b,i)=>`<div class="row">
+      <div class="main"><div class="name">${esc(b.item)}</div></div>
+      <input type="number" class="cellnum" data-path="brideExpenses.${i}.quote" value="${b.quote??''}"
+        placeholder="הצעה" style="width:96px" inputmode="numeric">
+      <input type="number" class="cellnum" data-path="brideExpenses.${i}.paid" value="${b.paid??''}"
+        placeholder="שולם" style="width:96px" inputmode="numeric">
+    </div>`).join('')}
+  </div>
+
+  <div class="card">
+    <div class="card-h"><span class="dot" style="background:var(--ink-3)"></span><h2>איך זה עובד</h2></div>
+    <div class="note" style="line-height:1.8">
+      <p><b>איפה הנתונים.</b> קובץ אחד, <code dir="ltr">state.json</code>, ב־repo פרטי
+        <code dir="ltr">RoiSadeh5/ourmoney-data</code>. כל מכשיר שומר גם עותק מקומי,
+        כך שהאפליקציה עובדת גם בלי אינטרנט ומסתנכרנת כשהחיבור חוזר.</p>
+      <p><b>מכשיר חדש.</b> פותחים את הכתובת, אייקון מסד הנתונים ← סנכרון ←
+        מדביקים אסימון. הנתונים יורדים לבד. אין צורך להעלות כלום.</p>
+      <p><b>שני טלפונים במקביל.</b> כל אורח נשמר בנפרד עם חותמת זמן, אז רישום מתנות
+        משני מכשירים לא דורס. אותו אורח בשניהם — האחרון מנצח.</p>
+      <p><b>אם משהו נראה חסר.</b> סנכרון ← «בדיקה: מה יש בשרת». הטבלה משווה מכשיר מול
+        שרת. אדום = חסר. אם חסר במכשיר — «משיכה מהשרת». אם חסר בשרת ובמכשיר יש —
+        «העלאת הכול לשרת».</p>
+      <p><b>גיבוי.</b> «ייצוא JSON» שומר קובץ מלא. שווה לעשות לפני החתונה.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-h"><span class="dot" style="background:var(--warn)"></span><h2>ילדים</h2>
+      <span class="sp note">מנת ילד ${money((s.venue||{}).childPlate)}</span></div>
+    ${(s.children||[]).map(c=>`<div class="row"><div class="main">
+      <div class="name">${esc(c.name)}</div><div class="sub">${esc(c.family||'')}</div></div>
+      <div class="val">${c.age!=null?c.age+' שנים':''}</div></div>`).join('')}
+  </div>`;
+}
+
+/* ================================================================= CAPITAL  *
+ * Loan math ported verbatim from calculator.html. These figures are checked
+ * against the real bank documents (see the doc{} blocks in the seed), so the
+ * formulas must not drift -- vCapital reproduces calculator.html exactly.
+ */
+const spz=(P,r,m)=>{ if(r<=0||m<=0) return {mo:P>0?Math.round(P/Math.max(m,1)):0,ti:0,tp:P};
+  const rm=r/12,f=Math.pow(1+rm,m),mo=P*rm*f/(f-1);
+  return {mo:Math.round(mo),ti:Math.round(mo*m-P),tp:Math.round(mo*m)}; };
+const grc=(P,r,gM,sM)=>{ const g=Math.round(P*r/12),gi=g*gM,s=spz(P,r,sM);
+  return {gMo:g,sMo:s.mo,ti:Math.round(gi+s.ti),tp:Math.round(gi+s.tp)}; };
+const bln=(P,r,m)=>{ const mo=Math.round(P*r/12);
+  return {mo,ti:mo*m,tp:mo*m+P,balloon:P}; };
+const lr=(l,p)=>l.fr!==undefined?l.fr/100:(l.st==='plus'?(p+l.spread)/100:(p-l.spread)/100);
+const lrl=(l,p)=>{ if(l.fr!==undefined) return l.fr===0?'0%':l.fr.toFixed(1)+'%';
+  const r=l.st==='plus'?p+l.spread:p-l.spread;
+  return `P${l.st==='plus'?'+':'-'}${l.spread.toFixed(2)} (${r.toFixed(2)}%)`; };
+
+function amort(P,r,m){
+  const rows=[]; let b=P;
+  if(r<=0){ const mo=Math.round(P/m);
+    for(let i=1;i<=m;i++){ b-=mo; rows.push({n:i,p:mo,i:0,t:mo,b:Math.max(0,b)}); }
+    return rows; }
+  const rm=r/12,f=Math.pow(1+rm,m),pmt=P*rm*f/(f-1);
+  for(let i=1;i<=m;i++){ const ip=b*rm,pp=pmt-ip; b-=pp;
+    rows.push({n:i,p:Math.round(pp),i:Math.round(ip),t:Math.round(pmt),b:Math.max(0,Math.round(b))}); }
+  return rows;
+}
+function amortHTML(P,r,m,title){
+  return `<details class="acc"><summary>לוח סילוקין — ${esc(title)}</summary><div>
+    <table><thead><tr><th>#</th><th class="num">קרן</th><th class="num">ריבית</th>
+      <th class="num">תשלום</th><th class="num">יתרה</th></tr></thead><tbody>
+    ${amort(P,r,m).map(x=>`<tr><td>${x.n}</td><td class="num">${nf.format(x.p)}</td>
+      <td class="num">${nf.format(x.i)}</td><td class="num">${nf.format(x.t)}</td>
+      <td class="num">${nf.format(x.b)}</td></tr>`).join('')}
+    </tbody></table></div></details>`;
+}
+
+// How many monthly payments of a loan starting at l.start (first payment date)
+// have already happened. Drives the live remaining-balance display.
+function monthsPaid(l){
+  if(!l.start) return 0;
+  const s=new Date(l.start+'T00:00:00'), t=new Date(todayISO()+'T00:00:00');
+  if(t<s) return 0;
+  let n=(t.getFullYear()-s.getFullYear())*12+(t.getMonth()-s.getMonth());
+  if(t.getDate()>=s.getDate()) n+=1;
+  return Math.min(Math.max(n,0),l.months);
+}
+
+// Monthly fixed outgoings: active loan payments plus standing expenses.
+// Loans flagged fromSalary are deducted before the salary lands, so counting
+// them against the net figure would double-count.
+function personOutgoings(key){
+  const d=Store.state.capital[key], p=ui.prime;
+  let loansMo=0;
+  d.loans.forEach(l=>{
+    if(l.fromSalary) return;
+    if(l.start&&monthsPaid(l)>=l.months) return;
+    loansMo+=l.doc?l.doc.monthly:spz(l.amount,lr(l,p),l.months).mo;
+  });
+  const fixed=(d.fixedExpenses||[]).reduce((a,f)=>a+(Number(f.amount)||0),0);
+  return {loansMo,fixed,total:loansMo+fixed};
+}
+
+function personIncome(key){
+  const d=Store.state.capital[key];
+  const net=Number(d.income&&d.income.net)||0;
+  const extra=(d.fixedIncomes||[]).reduce((a,f)=>a+(Number(f.amount)||0),0);
+  return {net,extra,total:net+extra};
+}
+
+function personCard(key,title,colour){
+  const d=Store.state.capital[key], p=ui.prime;
+  const assets=Object.entries(d.assets);
+  const totalAssets=assets.reduce((a,[,v])=>a+(Number(v)||0),0);
+  const fixed=d.fixedExpenses||[];
+  const totFix=fixed.reduce((a,f)=>a+(Number(f.amount)||0),0);
+
+  const rows=d.loans.map((l,i)=>{
+    const r=lr(l,p), s=spz(l.amount,r,l.months);
+    const paidN=monthsPaid(l);
+    const rem=!l.start?l.amount
+      : paidN<=0?l.amount
+      : paidN>=l.months?0
+      : amort(l.amount,r,l.months)[paidN-1].b;
+    const done=!!l.start&&paidN>=l.months;
+    const mo=done?0:(l.doc?l.doc.monthly:s.mo), ti=l.doc?l.doc.interest:s.ti;
+    return {l,i,r,mo,ti,paidN,rem,done};
+  });
+  const totMo=rows.reduce((a,x)=>a+x.mo,0), totTi=rows.reduce((a,x)=>a+x.ti,0);
+  const totRem=rows.reduce((a,x)=>a+x.rem,0);
+  const net=totalAssets-totRem;
+
+  return `<div class="card">
+    <div class="card-h"><span class="dot" style="background:${colour}"></span><h2>${title}</h2>
+      <span class="sp note">נכסים ${money(totalAssets)}</span></div>
+
+    <div class="grid g2">
+      <div>
+        <div class="note" style="font-weight:700;margin-bottom:.3rem">הכנסה חודשית</div>
+        <div class="row"><div class="main"><div class="name">ברוטו</div></div>
+          <input type="number" class="cellnum inln" data-path="capital.${key}.income.gross"
+            value="${d.income&&d.income.gross!=null?d.income.gross:''}" style="width:100px" inputmode="numeric"></div>
+        <div class="row"><div class="main"><div class="name">נטו</div></div>
+          <input type="number" class="cellnum inln" data-path="capital.${key}.income.net"
+            value="${d.income&&d.income.net!=null?d.income.net:''}" style="width:100px" inputmode="numeric"></div>
+        ${(d.fixedIncomes||[]).map((f,i)=>`<div class="row">
+          <div class="main"><div class="name">${esc(f.name)}</div></div>
+          <input type="number" class="cellnum inln" data-path="capital.${key}.fixedIncomes.${i}.amount"
+            value="${f.amount??''}" style="width:90px" inputmode="numeric">
+          <button class="btn btn-d sm" data-delfixin="${key}.${i}">מחיקה</button>
+        </div>`).join('')}
+        <button class="btn btn-o sm" style="margin:.3rem 0 .5rem" data-addfixin="${key}">+ הכנסה קבועה</button>
+        <div class="row"><div class="main"><b>סה״כ נכנס בחודש</b></div>
+          <div class="val" style="color:var(--good-2)">${money(personIncome(key).total)}</div></div>
+
+        <div class="note" style="font-weight:700;margin:.7rem 0 .3rem">נכסים וחסכונות</div>
+        ${assets.map(([k,v])=>`<div class="row">
+          <div class="main"><div class="name">${esc(ASSET_HE[k]||k)}</div>
+            ${d.assetMeta&&d.assetMeta[k]?`<div class="sub">${noteLines(d.assetMeta[k])}</div>`:''}</div>
+          <input type="number" class="cellnum" data-path="capital.${key}.assets.${k}"
+            value="${v??''}" style="width:110px" inputmode="numeric">
+        </div>`).join('')}
+        <div class="row"><div class="main"><b>סה״כ</b></div>
+          <div class="val" style="color:var(--good-2)">${money(totalAssets)}</div></div>
+      </div>
+
+      <div>
+        <div class="note" style="font-weight:700;margin-bottom:.3rem">הלוואות</div>
+        ${rows.map(({l,i,r,mo,ti,paidN,rem,done})=>`
+          <div class="spaced" style="padding:.7rem 0;border-bottom:1px solid var(--line)${done?';opacity:.6':''}">
+            <div style="display:flex;gap:.5rem;align-items:baseline;flex-wrap:wrap">
+              <b style="font-size:.88rem">${esc(l.name)}</b>
+              ${done?'<span class="tag t-good">נפרעה ✓</span>'
+                    :`<span class="tag t-mute" dir="ltr">${esc(l.doc?l.doc.rate:lrl(l,p))}</span>`}
+              ${l.fromSalary?'<span class="tag t-brand">יורד מהשכר</span>':''}
+              <span class="sp" style="margin-inline-start:auto;font-weight:700">${done?'':money(mo)+'/חד׳'}</span>
+            </div>
+            <div class="note">קרן
+              <input type="number" class="loanedit inln" data-lp="capital.${key}.loans.${i}.amount"
+                value="${l.amount}" style="width:96px" inputmode="numeric">
+              ·
+              <input type="number" class="loanedit inln" data-lp="capital.${key}.loans.${i}.months"
+                value="${l.months}" style="width:58px" inputmode="numeric"> חד׳
+              ·
+              ${l.fr!==undefined
+                ?`ריבית <input type="number" class="loanedit inln" data-lp="capital.${key}.loans.${i}.fr"
+                    value="${l.fr}" step="0.05" style="width:64px">%`
+                :`P${l.st==='plus'?'+':'−'}<input type="number" class="loanedit inln"
+                    data-lp="capital.${key}.loans.${i}.spread" value="${l.spread}" step="0.05"
+                    style="width:64px">`}
+              · תשלום ראשון
+              <input type="date" class="loanedit inln" data-lp="capital.${key}.loans.${i}.start"
+                value="${l.start||''}" style="width:148px">
+            </div>
+            ${l.start&&!done?`<div class="note">יתרה להיום
+              <b style="color:var(--warn-2)">${money(rem)}</b>
+              · שולמו ${paidN}/${l.months} · נותרו ${l.months-paidN} חד׳
+              ${l.doc&&l.doc.balance?` · לפי דף הבנק: ${money(l.doc.balance)}`:''}</div>`:''}
+            <div class="note">ריבית מצטברת <b style="color:var(--bad-2)">${money(ti)}</b>
+              ${l.doc?` · ${esc(l.doc.start)}–${esc(l.doc.end)}`:''}
+              <button class="btn btn-d sm" data-delloan="${key}.${i}"
+                style="float:inline-end;min-height:24px;padding:.1rem .5rem">מחיקה</button>
+            </div>
+            ${l.doc&&l.doc.note?`<div class="note" style="color:var(--warn-2)">⚠ ${noteLines(l.doc.note)}</div>`:''}
+            ${done?'':amortHTML(l.amount,r,l.months,l.name)}
+          </div>`).join('')}
+        <div class="row"><div class="main"><b>סה״כ החזר חודשי</b></div>
+          <div class="val" style="color:var(--bad-2)">${money(totMo)}/חד׳</div></div>
+        <div class="row"><div class="main"><b>סה״כ יתרות להיום</b></div>
+          <div class="val" style="color:var(--bad-2)">${money(totRem)}</div></div>
+        <div class="row"><div class="main"><b>סה״כ ריבית</b></div>
+          <div class="val" style="color:var(--bad-2)">${money(totTi)}</div></div>
+        <div class="row"><div class="main"><b>נטו — נכסים פחות הלוואות</b></div>
+          <div class="val" style="color:${net>=0?'var(--good-2)':'var(--bad-2)'}">${money(net)}</div></div>
+
+        <div class="note" style="font-weight:700;margin:.7rem 0 .2rem">הוצאות קבועות נוספות</div>
+        ${fixed.map((f,i)=>`<div class="row">
+          <div class="main"><div class="name">${esc(f.name)}</div></div>
+          <input type="number" class="cellnum inln" data-path="capital.${key}.fixedExpenses.${i}.amount"
+            value="${f.amount??''}" style="width:90px" inputmode="numeric">
+          <button class="btn btn-d sm" data-delfix="${key}.${i}">מחיקה</button>
+        </div>`).join('')||'<div class="note">אין — אפשר להוסיף</div>'}
+        <button class="btn btn-o sm" style="margin-top:.4rem" data-addfix="${key}">+ הוצאה קבועה</button>
+        <div class="row"><div class="main"><b>סה״כ קבוע בחודש — הלוואות + קבועות</b>
+          ${rows.some(x=>x.l.fromSalary)?'<div class="sub note">בלי מה שיורד ישירות מהשכר</div>':''}</div>
+          <div class="val" style="color:var(--bad-2)">${money(rows.filter(x=>!x.l.fromSalary&&!x.done).reduce((a,x)=>a+x.mo,0)+totFix)}</div></div>
+        <button class="btn btn-o sm" data-addloan="${key}" style="margin-top:.5rem">+ הלוואה</button>
+      </div>
+    </div>
+  </div>`;
+}
+const ASSET_HE={kh:'קרן השתלמות',pension:'קרן פנסיה',trading_il:'תיק מסחר ישראלי',
+  trading_us:'תיק מסחר אמריקאי',gemel_analyst:'גמל — אנליסט',
+  gemel_altshuler:'גמל — אלטשולר שחם',liquid:'נזיל'};
+
+function vCapital(){
+  const c=Store.state.capital; if(!c) return '<div class="empty">אין נתוני הון</div>';
+  // Prime and CPI live in the synced state so every device sees today's rate.
+  if(c.prime!=null) ui.prime=c.prime;
+  if(c.cpi!=null)   ui.cpi=c.cpi;
+  const p=ui.prime, re=c.realEstate||[];
+  const cost=re.reduce((a,x)=>a+x.cost,0), paid=re.reduce((a,x)=>a+x.paid,0);
+  const gap=cost-paid;
+
+  const calcRes=capCalc();
+  const oR=personOutgoings('roei'), oJ=personOutgoings('jordan');
+  const iR=personIncome('roei'), iJ=personIncome('jordan');
+  const n=NAMES();
+  const left=(i,o)=>i.total-o.total;
+
+  return `
+  <div class="grid g3">
+    ${stat(`${n.groom} — נשאר בחודש`,moneyS(left(iR,oR)),
+       `נכנס ${money(iR.total)} · קבוע יוצא ${money(oR.total)}`,
+       left(iR,oR)>=0?'var(--good-2)':'var(--bad-2)')}
+    ${stat(`${n.bride} — נשאר בחודש`,moneyS(left(iJ,oJ)),
+       `נכנס ${money(iJ.total)} · קבוע יוצא ${money(oJ.total)}`,
+       left(iJ,oJ)>=0?'var(--good-2)':'var(--bad-2)')}
+    ${stat('ביחד — נשאר בחודש',moneyS(left(iR,oR)+left(iJ,oJ)),
+       `נכנס ${money(iR.total+iJ.total)} · יוצא ${money(oR.total+oJ.total)}`,'var(--brand-2)')}
+  </div>
+  <div class="grid g3" style="margin-top:.7rem">
+    ${stat(`${n.groom} — קבוע בחודש`,money(oR.total),
+       `הלוואות ${money(oR.loansMo)} + קבועות ${money(oR.fixed)}`,'var(--bad-2)')}
+    ${stat(`${n.bride} — קבוע בחודש`,money(oJ.total),
+       `הלוואות ${money(oJ.loansMo)} + קבועות ${money(oJ.fixed)}`,'var(--plum)')}
+    ${stat('ביחד — קבוע',money(oR.total+oJ.total),'סה״כ הוצאות קבועות בחודש','var(--warn-2)')}
+  </div>
+
+  <div class="card" style="margin-top:.85rem">
+    <div class="card-h"><span class="dot" style="background:var(--brand)"></span><h2>תרחיש ריבית</h2></div>
+    <div class="grid g2">
+      <label class="fld"><span>ריבית פריים — <b style="color:var(--brand-2)">${p.toFixed(2)}%</b></span>
+        <input type="range" id="prime" min="2" max="12" step="0.25" value="${p}" style="min-height:auto"></label>
+      <label class="fld"><span>מדד מחירים לצרכן — <b style="color:var(--brand-2)">${ui.cpi.toFixed(2)}%</b></span>
+        <input type="range" id="cpi" min="0" max="8" step="0.25" value="${ui.cpi}" style="min-height:auto"></label>
+    </div>
+    <div class="chips" style="margin-top:.6rem">
+      <button class="chip" data-sc="4,1.5">אופטימי</button>
+      <button class="chip" data-sc="5,2.5">היום (פריים 5%)</button>
+      <button class="chip" data-sc="7.5,4.5">קיצון</button>
+    </div>
+  </div>
+
+  ${personCard('roei',NAMES().groom,'var(--brand)')}
+  ${personCard('jordan',NAMES().bride,'var(--plum)')}
+  ${socialCard()}
+
+  <div class="card">
+    <div class="card-h"><span class="dot" style="background:var(--good)"></span><h2>תיק נדל״ן</h2>
+      <span class="sp note">${money(cost)}</span></div>
+    ${re.map((x,i)=>`<div style="padding:.6rem 0;border-bottom:1px solid var(--line)">
+      <div style="display:flex;gap:.5rem;align-items:baseline;flex-wrap:wrap">
+        <b>${esc(x.name)}</b>
+        <span class="tag ${x.paid>=x.cost?'t-good':'t-bad'}">${x.paid>=x.cost?'שולם במלואו':money(x.cost-x.paid)+' לגייס'}</span>
+        <span class="sp" style="margin-inline-start:auto;font-weight:700">${money(x.cost)}</span>
+      </div>
+      <div class="note">${esc(x.status)} · היתר בנייה ${esc(x.estPermit)}
+        · חלק ${NAMES().groom} ${money(x.roeiShare)} · חלק ${NAMES().bride} ${money(x.jordanShare)}</div>
+      ${x.notes?`<div class="note">${esc(x.notes)}</div>`:''}
+      <div class="note" style="margin-top:.3rem">שולם
+        <input type="number" class="cellnum" data-path="capital.realEstate.${i}.paid" value="${x.paid}"
+          style="width:110px;display:inline-block;min-height:28px;padding:.15rem .4rem" inputmode="numeric"></div>
+    </div>`).join('')}
+    <div class="grid g3" style="margin-top:.7rem">
+      ${mini('סה״כ תיק',cost)}${mini('שולם',paid,'var(--good-2)')}
+      ${mini('נותר לגייס',gap,gap>0?'var(--bad-2)':'var(--good-2)')}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-h"><span class="dot" style="background:var(--warn)"></span><h2>מחשבון הלוואה</h2></div>
+    <div class="grid g3">
+      <label class="fld"><span>סכום (₪)</span><input type="number" id="cAm" value="${ui.calc.amount}" step="1000" inputmode="numeric"></label>
+      <label class="fld"><span>סוג ריבית</span><select id="cRT">
+        <option value="pp" ${ui.calc.rt==='pp'?'selected':''}>פריים + מרווח</option>
+        <option value="pm" ${ui.calc.rt==='pm'?'selected':''}>פריים − מרווח</option>
+        <option value="fx" ${ui.calc.rt==='fx'?'selected':''}>קבועה</option>
+        <option value="fc" ${ui.calc.rt==='fc'?'selected':''}>קבועה + מדד</option>
+      </select></label>
+      <label class="fld"><span>מרווח / ריבית (%)</span><input type="number" id="cSpr" value="${ui.calc.spread}" step="0.1"></label>
+      <label class="fld"><span>סוג הלוואה</span><select id="cTy">
+        <option value="sp" ${ui.calc.ty==='sp'?'selected':''}>שפיצר</option>
+        <option value="gr" ${ui.calc.ty==='gr'?'selected':''}>גרייס + שפיצר</option>
+        <option value="bl" ${ui.calc.ty==='bl'?'selected':''}>בלון</option>
+      </select></label>
+      <label class="fld"><span>תקופה (חודשים)</span><input type="number" id="cMo" value="${ui.calc.months}" inputmode="numeric"></label>
+      ${ui.calc.ty!=='sp'?`<label class="fld"><span>חודשי גרייס</span>
+        <input type="number" id="cGr" value="${ui.calc.grace}" inputmode="numeric"></label>`:''}
+    </div>
+    ${calcRes}
+  </div>`;
+}
+
+/* Pension and study-fund contributions, derived from gross salary at the
+   maximum rates: pension 7% employee + 7.5% employer + 8.33% severance,
+   study fund 2.5% + 7.5%. */
+function socialCard(){
+  const n=NAMES();
+  const P={emp:7,er:7.5,sev:8.33}, K={emp:2.5,er:7.5};
+  const person=(key,name)=>{
+    const g=Number(Store.state.capital[key].income&&Store.state.capital[key].income.gross)||0;
+    if(!g) return '';
+    const pe=g*P.emp/100, pr=g*P.er/100, ps=g*P.sev/100, pt=pe+pr+ps;
+    const ke=g*K.emp/100, kr=g*K.er/100, kt=ke+kr;
+    return `<div class="spaced" style="padding:.8rem 0;border-bottom:1px solid var(--line)">
+      <div style="display:flex;gap:.5rem;align-items:baseline">
+        <b>${esc(name)}</b><span class="note">ברוטו ${money(g)}</span>
+        <span class="sp" style="margin-inline-start:auto;font-weight:800;color:var(--good-2)">${money(pt+kt)}/חד׳</span>
+      </div>
+      <div class="note"><b>פנסיה — ${money(pt)}/חד׳</b><br>
+        עובד ${P.emp}% = ${money(pe)}<br>
+        מעביד ${P.er}% = ${money(pr)}<br>
+        פיצויים ${P.sev}% = ${money(ps)}</div>
+      <div class="note"><b>קרן השתלמות — ${money(kt)}/חד׳</b><br>
+        עובד ${K.emp}% = ${money(ke)}<br>
+        מעביד ${K.er}% = ${money(kr)}</div>
+      <div class="note">בשנה: פנסיה ${money(pt*12)} · קה״ש ${money(kt*12)}
+        · <b>סה״כ ${money((pt+kt)*12)}</b></div>
+    </div>`;
+  };
+  const body=person('roei',n.groom)+person('jordan',n.bride);
+  if(!body) return '';
+  return `<div class="card">
+    <div class="card-h"><span class="dot" style="background:var(--good)"></span>
+      <h2>הפרשות לפנסיה וקרן השתלמות — מחושב מהברוטו</h2></div>
+    ${body}
+    <p class="note" style="margin-top:.5rem">חישוב לפי הפרשה מקסימלית. תקרת ההפקדה
+    המוטבת בקרן השתלמות היא על ברוטו של כ־15.7 אלף ₪ בחודש — הפרשות על שכר שמעל
+    התקרה נכנסות, אבל הרווחים עליהן חייבים במס רווח הון.</p>
+  </div>`;
+}
+
+function capCalc(){
+  const {amount:a,months:m,grace:gM,ty,rt,spread:s}=ui.calc;
+  const p=ui.prime,c=ui.cpi;
+  let r,label;
+  if(rt==='pp'){ r=p+s; label=`P+${s.toFixed(1)} = ${r.toFixed(2)}%`; }
+  else if(rt==='pm'){ r=p-s; label=`P−${s.toFixed(1)} = ${r.toFixed(2)}%`; }
+  else if(rt==='fx'){ r=s; label=`${r.toFixed(2)}% קבועה`; }
+  else { r=s+c; label=`${s.toFixed(1)}% + מדד = ${r.toFixed(2)}%`; }
+  const rate=r/100;
+
+  const bar=(prin,int)=>{ const t=prin+int; if(t<=0) return '';
+    return `<div class="bar" style="margin-top:.7rem;height:22px">
+      <i style="width:${prin/t*100}%;background:var(--brand)"></i>
+      <i style="width:${int/t*100}%;background:var(--bad)"></i></div>
+      <div class="chips" style="margin-top:.4rem">
+        <span class="chip sm">קרן ${Math.round(prin/t*100)}%</span>
+        <span class="chip sm">ריבית ${Math.round(int/t*100)}%</span></div>`; };
+
+  if(ty==='sp'){
+    const x=spz(a,rate,m);
+    return `<div class="grid g4" style="margin-top:.85rem">
+      ${statMini('ריבית',label)}${statMini('החזר חודשי',money(x.mo))}
+      ${statMini('סה״כ ריבית',money(x.ti),'var(--bad-2)')}${statMini('סה״כ תשלום',money(x.tp))}
+    </div>`+bar(a,x.ti)+amortHTML(a,rate,m,'הלוואה מחושבת');
+  }
+  if(ty==='gr'){
+    const x=grc(a,rate,gM,Math.max(1,m-gM));
+    return `<div class="grid g4" style="margin-top:.85rem">
+      ${statMini('ריבית',label)}${statMini('בתקופת גרייס',money(x.gMo))}
+      ${statMini('אחר כך',money(x.sMo))}${statMini('סה״כ ריבית',money(x.ti),'var(--bad-2)')}
+    </div>`+bar(a,x.ti);
+  }
+  const x=bln(a,rate,m);
+  return `<div class="grid g4" style="margin-top:.85rem">
+    ${statMini('ריבית',label)}${statMini('חודשי (ריבית בלבד)',money(x.mo))}
+    ${statMini('תשלום בלון בסוף',money(x.balloon),'var(--warn-2)')}
+    ${statMini('סה״כ ריבית',money(x.ti),'var(--bad-2)')}
+  </div>`+bar(a,x.ti);
+}
+const statMini=(k,v,c)=>`<div class="stat" style="--c:${c||'var(--brand)'}">
+  <div class="k">${k}</div><div class="v" style="font-size:1.05rem">${v}</div></div>`;
+
+/* ==================================================================== SYNC  *
+ * Supabase over plain fetch — no client library, no CDN, nothing to fail to
+ * load at the venue. PostgREST and GoTrue are just HTTP.
+ *
+ * Offline-first: localStorage is always the source of truth. A failed request
+ * never blocks an edit; it leaves the row dirty and it goes up on the next
+ * successful pass. Freshness is polled rather than streamed — websockets buy
+ * nothing here and are one more thing to drop on hotel wifi.
+ * ========================================================================== */
+const GH_TOKEN='ourmoney/gh-token', GH_SHA='ourmoney/gh-sha';
+const POLL_MS=10000;
+
+/* ==================================================================== SYNC  *
+ * State is one JSON file in a private GitHub repo, read and written through
+ * the Contents API. Chosen over a database for one blunt reason: this is the
+ * only backend both the app AND Claude can reach directly, so a problem can be
+ * inspected and repaired at the source instead of relayed through the user.
+ *
+ * The whole document travels at once, so merging is done per entity on a
+ * modified stamp: two phones editing different guests never collide, and the
+ * later edit wins on the same one.
+ * ========================================================================== */
+const b64enc=s=>{ const b=new TextEncoder().encode(s); let x='';
+  b.forEach(c=>{ x+=String.fromCharCode(c); }); return btoa(x); };
+const b64dec=s=>new TextDecoder().decode(
+  Uint8Array.from(atob(String(s).replace(/\s/g,'')),c=>c.charCodeAt(0)));
+
+const Sync={
+  repo:'RoiSadeh5/ourmoney-data', path:'state.json',
+  token:null, sha:null, status:'off', lastError:null, busy:false, timer:null,
+  snap:{guests:{},vendors:{},tasks:{}},
+
+  load(){
+    try{ this.token=localStorage.getItem(GH_TOKEN)||null;
+         this.sha=localStorage.getItem(GH_SHA)||null; }catch(e){}
+    if(this.token) this.status='idle';
+  },
+  saveToken(t){ this.token=t.trim(); localStorage.setItem(GH_TOKEN,this.token); },
+  forget(){ localStorage.removeItem(GH_TOKEN); localStorage.removeItem(GH_SHA);
+            this.token=null; this.sha=null; this.status='off'; this.stop(); },
+  get on(){ return !!this.token; },
+  get who(){ return this.repo; },
+
+  async api(path,opts={}){
+    const r=await fetch(`https://api.github.com/${path}`,{
+      ...opts,
+      headers:{'Authorization':`Bearer ${this.token}`,
+               'Accept':'application/vnd.github+json',
+               'X-GitHub-Api-Version':'2022-11-28',...(opts.headers||{})},
+    });
+    if(r.status===404) return null;
+    if(!r.ok){
+      let msg=''; try{ msg=(await r.json()).message||''; }catch(e){}
+      throw new Error(`${r.status}: ${msg||'שגיאה'}`);
+    }
+    return r.json();
+  },
+
+  /* --------------------------------------------------------------- stamps */
+  clean(o){ const c={...o}; delete c._m; return JSON.stringify(c); },
+  seedSnapshot(){
+    if(!Store.state) return;
+    ['guests','vendors','tasks'].forEach(k=>{
+      this.snap[k]={};
+      (Store.state[k]||[]).forEach(i=>{ this.snap[k][i.id]=this.clean(i); });
+    });
+  },
+  // Anything whose content changed since the last pass gets a fresh stamp, so
+  // no mutation site has to remember to mark itself dirty.
+  stampChanges(){
+    if(!Store.state) return;
+    const now=Date.now();
+    ['guests','vendors','tasks'].forEach(k=>{
+      (Store.state[k]||[]).forEach(i=>{
+        const h=this.clean(i);
+        if(this.snap[k][i.id]!==h){ i._m=now; this.snap[k][i.id]=h; }
+      });
+    });
+  },
+
+  COLD:['meta','venue','income','forecast','forecastIncome','quotes','contacts',
+        'paymentChecklist','events','children','brideExpenses','capital'],
+
+  merge(remote){
+    if(!Store.state){ Store.state=remote; return 1; }
+    let n=0;
+    ['guests','vendors','tasks'].forEach(k=>{
+      const local=Store.state[k]||(Store.state[k]=[]);
+      const byId=new Map(local.map((x,i)=>[x.id,i]));
+      (remote[k]||[]).forEach(r=>{
+        if(byId.has(r.id)){
+          const l=local[byId.get(r.id)];
+          if((r._m||0)>(l._m||0)){ Object.assign(l,r); n++; }
+        }else{ local.push(r); n++; }
+      });
+    });
+    // Cold data moves as a block; the newer stamp wins.
+    if((remote._coldM||0)>(Store.state._coldM||0)){
+      this.COLD.forEach(k=>{ if(remote[k]!==undefined) Store.state[k]=remote[k]; });
+      Store.state._coldM=remote._coldM; n++;
+    }
+    return n;
+  },
+
+  coldChanged(){
+    // A fresh device connects with no state at all -- nothing to stamp yet.
+    if(!Store.state) return false;
+    const h=JSON.stringify(this.COLD.map(k=>Store.state[k]));
+    if(h!==this._coldSnap){ this._coldSnap=h; return true; }
+    return false;
+  },
+
+  /* ----------------------------------------------------------------- pull */
+  async fetchRemote(){
+    const j=await this.api(`repos/${this.repo}/contents/${this.path}`);
+    if(!j) return null;
+    this.sha=j.sha; localStorage.setItem(GH_SHA,j.sha);
+    return JSON.parse(b64dec(j.content));
+  },
+
+  /* ----------------------------------------------------------------- push */
+  async pushNow(){
+    const body=JSON.stringify(Store.state);
+    const payload={message:`sync ${new Date().toISOString()}`,content:b64enc(body)};
+    if(this.sha) payload.sha=this.sha;
+    let j;
+    try{
+      j=await this.api(`repos/${this.repo}/contents/${this.path}`,
+        {method:'PUT',headers:{'Content-Type':'application/json'},
+         body:JSON.stringify(payload)});
+    }catch(e){
+      // 409 means someone else wrote first: take theirs, merge, write again.
+      if(/^409/.test(e.message)){
+        const remote=await this.fetchRemote();
+        if(remote) this.merge(remote);
+        const retry={message:'sync merge',content:b64enc(JSON.stringify(Store.state)),sha:this.sha};
+        j=await this.api(`repos/${this.repo}/contents/${this.path}`,
+          {method:'PUT',headers:{'Content-Type':'application/json'},
+           body:JSON.stringify(retry)});
+      }else throw e;
+    }
+    if(j&&j.content){ this.sha=j.content.sha; localStorage.setItem(GH_SHA,j.content.sha); }
+  },
+
+  async run(){
+    if(!this.on||this.busy) return;
+    this.busy=true; this.setStatus('syncing');
+    try{
+      const remote=await this.fetchRemote();
+      const hadLocal=!!Store.state;
+      if(remote){
+        this.stampChanges();
+        const n=this.merge(remote);
+        if(n){ Store.migrate(); Store.saveNow(); this.seedSnapshot(); render(); }
+        // Bootstrapped from the server just now: seed the cold snapshot so the
+        // next pass doesn't stamp _coldM over data this device never touched.
+        if(!hadLocal) this.coldChanged();
+      }
+      if(hadLocal){
+        this.stampChanges();
+        if(this.coldChanged()) Store.state._coldM=Date.now();
+        await this.pushNow();
+      }
+      this.lastError=null; this.setStatus('ok');
+    }catch(e){ this.lastError=e.message; this.setStatus('error'); }
+    finally{ this.busy=false; }
+  },
+
+  async uploadAll(){
+    Store.state._coldM=Date.now();
+    const now=Date.now();
+    ['guests','vendors','tasks'].forEach(k=>
+      (Store.state[k]||[]).forEach(i=>{ i._m=now; }));
+    this.sha=null;
+    try{ const r=await this.fetchRemote(); }catch(e){}
+    await this.pushNow();
+    this.seedSnapshot();
+    toast('הכול הועלה');
+  },
+
+  async diagnose(){
+    const remote=await this.fetchRemote();
+    const cnt=s=>s?({guests:(s.guests||[]).length,vendors:(s.vendors||[]).length,
+      tasks:(s.tasks||[]).length,
+      payments:(s.vendors||[]).reduce((a,v)=>a+((v.payments||[]).length),0)}):null;
+    return {local:cnt(Store.state),server:cnt(remote),
+            serverDate:remote&&remote.meta?remote.meta.weddingDate:null};
+  },
+
+  looksPartial(){
+    const s=Store.state, why=[];
+    if(!s) return ['אין נתונים כלל'];
+    if(!s.tasks||!s.tasks.length) why.push('אין משימות');
+    if(!s.meta||!s.meta.weddingDate) why.push('אין תאריך חתונה');
+    if(!s.venue||!s.venue.pricePerPlate) why.push('אין מחיר מנה');
+    return why;
+  },
+
+  setStatus(s){
+    this.status=s;
+    const el=document.getElementById('syncPill');
+    if(!el) return;
+    const map={ok:['✓','var(--good-2)','מסונכרן'],syncing:['⟳','var(--brand-2)','מסנכרן…'],
+                error:['⚠','var(--bad-2)',this.lastError||'שגיאה'],
+                idle:['⟳','var(--ink-3)','ממתין'],off:['','','']};
+    const [icon,colour,label]=map[s]||map.off;
+    el.style.display=this.on?'flex':'none';
+    el.style.color=colour; el.title=label; el.textContent=icon;
+  },
+
+  async start(){
+    if(!this.on) return;
+    this.stop();
+    this.seedSnapshot();
+    this.coldChanged();
+    await this.run();
+    this.timer=setInterval(()=>{ if(!document.hidden) this.run(); },POLL_MS);
+  },
+  stop(){ clearInterval(this.timer); this.timer=null; },
+  nudge(){ if(this.on){ clearTimeout(this._n); this._n=setTimeout(()=>this.run(),1500); } },
+};
+
+/* ================================================================== events  */
+const $=s=>document.querySelector(s);
+
+document.addEventListener('click',e=>{
+  const b=e.target.closest('button,[data-act]'); if(!b) return;
+
+  if(b.dataset.v){ active=b.dataset.v; render(); window.scrollTo(0,0); return; }
+  if(b.dataset.bview!==undefined){ ui.budgetView=b.dataset.bview; render(); return; }
+  if(b.dataset.gside!==undefined){ ui.guestSide=b.dataset.gside; render(); return; }
+  if(b.dataset.grsvp!==undefined){ ui.guestRsvp=ui.guestRsvp===b.dataset.grsvp?'':b.dataset.grsvp; render(); return; }
+  if(b.dataset.gsort){ ui.giftSort=b.dataset.gsort; render(); return; }
+  if(b.hasAttribute('data-gonly')){ ui.giftOnlyOpen=!ui.giftOnlyOpen; render(); return; }
+  if(b.dataset.tf){ ui.taskFilter=b.dataset.tf; render(); return; }
+  if(b.dataset.sc){ const [p,c]=b.dataset.sc.split(',').map(Number);
+    ui.prime=p; ui.cpi=c;
+    return Store.update(s=>{ if(s.capital){ s.capital.prime=p; s.capital.cpi=c; } }); }
+
+  if(b.dataset.inv!==undefined) return Store.update(s=>{
+    const g=s.guests[+b.dataset.inv]; g.invitationSent=!g.invitationSent; });
+
+  if(b.dataset.gr!==undefined) return Store.update(s=>{
+    const g=s.guests[+b.dataset.gr];
+    g.gift.received=!g.gift.received;
+    g.gift.date=g.gift.received?todayISO():null; });
+
+  if(b.dataset.td!==undefined) return Store.update(s=>{
+    const t=s.tasks[+b.dataset.td]; t.status=t.status==='done'?'open':'done'; });
+
+  if(b.dataset.pay!==undefined) return addPayment(+b.dataset.pay);
+
+  if(b.dataset.delpay){
+    const [i,j]=b.dataset.delpay.split('.').map(Number);
+    if(!confirm('למחוק את התשלום?')) return;
+    return Store.update(s=>{ s.vendors[i].payments.splice(j,1); });
+  }
+
+  if(b.dataset.delloan){
+    const [k,i]=b.dataset.delloan.split('.');
+    const nm=Store.state.capital[k].loans[+i].name;
+    if(!confirm(`למחוק את ההלוואה «${nm}»?`)) return;
+    return Store.update(s=>{ s.capital[k].loans.splice(+i,1); });
+  }
+  if(b.dataset.addloan) return addLoan(b.dataset.addloan);
+
+  if(b.dataset.addfix){
+    const name=prompt('שם ההוצאה הקבועה:'); if(!name) return;
+    const amount=Number(prompt('סכום חודשי (₪):','1000')); if(!amount) return;
+    return Store.update(s=>{
+      (s.capital[b.dataset.addfix].fixedExpenses ||= [])
+        .push({id:'f'+Date.now(),name:name.trim(),amount});
+    });
+  }
+  if(b.dataset.delfix){
+    const [k,i]=b.dataset.delfix.split('.');
+    const f=Store.state.capital[k].fixedExpenses[+i];
+    if(!confirm(`למחוק את «${f.name}»?`)) return;
+    return Store.update(s=>{ s.capital[k].fixedExpenses.splice(+i,1); });
+  }
+  if(b.dataset.addfixin){
+    const name=prompt('שם ההכנסה הקבועה:'); if(!name) return;
+    const amount=Number(prompt('סכום חודשי (₪):','1000')); if(!amount) return;
+    return Store.update(s=>{
+      (s.capital[b.dataset.addfixin].fixedIncomes ||= [])
+        .push({id:'in'+Date.now(),name:name.trim(),amount});
+    });
+  }
+  if(b.dataset.delfixin){
+    const [k,i]=b.dataset.delfixin.split('.');
+    const f=Store.state.capital[k].fixedIncomes[+i];
+    if(!confirm(`למחוק את «${f.name}»?`)) return;
+    return Store.update(s=>{ s.capital[k].fixedIncomes.splice(+i,1); });
+  }
+
+  if(b.dataset.delcheck){
+    const [vi,ci]=b.dataset.delcheck.split('.').map(Number);
+    const c=Store.state.vendors[vi].checks[ci];
+    if(!confirm(`למחוק את הצ׳ק על ${money(c.amount)}?`)) return;
+    return Store.update(s=>{ s.vendors[vi].checks.splice(ci,1); });
+  }
+
+  if(b.dataset.act) return dataAction(b.dataset.act);
+});
+
+document.addEventListener('input',e=>{
+  const t=e.target;
+  if(t.id==='guestQ'){ ui.guestQ=t.value; return debounceRender(t); }
+  if(t.id==='giftQ'){ ui.giftQ=t.value; return debounceRender(t); }
+  // Sliders update their label live but only re-render on release -- re-rendering
+  // mid-drag would tear the slider out from under the pointer.
+  if(t.id==='prime'||t.id==='cpi'){
+    const b=t.closest('label')?.querySelector('b');
+    if(b) b.textContent=Number(t.value).toFixed(2)+'%';
+  }
+});
+
+const CALC_FIELDS={cAm:'amount',cMo:'months',cGr:'grace',cSpr:'spread',cRT:'rt',cTy:'ty'};
+
+document.addEventListener('change',e=>{
+  const t=e.target;
+  if(t.id==='guestGroup'){ ui.guestGroup=t.value; return render(); }
+
+  if(t.id==='prime'){ ui.prime=Number(t.value);
+    return Store.update(s=>{ if(s.capital) s.capital.prime=ui.prime; }); }
+  if(t.id==='cpi'){ ui.cpi=Number(t.value);
+    return Store.update(s=>{ if(s.capital) s.capital.cpi=ui.cpi; }); }
+  if(CALC_FIELDS[t.id]){
+    const key=CALC_FIELDS[t.id];
+    ui.calc[key]=(key==='rt'||key==='ty')?t.value:(Number(t.value)||0);
+    return render();
+  }
+
+  if(t.dataset.rsvp!==undefined) return Store.update(s=>{ s.guests[+t.dataset.rsvp].rsvp=t.value; });
+  if(t.dataset.gm!==undefined)   return Store.update(s=>{ s.guests[+t.dataset.gm].gift.method=t.value||null; });
+
+  if(t.classList.contains('giftamt')){
+    const v=t.value===''?null:Number(t.value);
+    return Store.update(s=>{
+      const g=s.guests[+t.dataset.gi];
+      g.gift.amount=v;
+      if(v!=null && !g.gift.date) g.gift.date=todayISO();
+    });
+  }
+  if(t.classList.contains('cellnum')){
+    const v=t.value===''?null:Number(t.value);
+    return Store.update(()=>setPath(t.dataset.path,v));
+  }
+  if(t.classList.contains('loanedit')){
+    const v=t.type==='date'?(t.value||null):(t.value===''?0:Number(t.value));
+    return Store.update(s=>{
+      setPath(t.dataset.lp,v);
+      // The doc{} block quotes the bank paperwork; once the terms are edited
+      // it no longer describes this loan, so the computed figures take over.
+      const m=t.dataset.lp.match(/^capital\.(\w+)\.loans\.(\d+)\./);
+      if(m) delete s.capital[m[1]].loans[+m[2]].doc;
+    });
+  }
+});
+
+/* Search must not blow away focus on every keystroke. */
+let dT;
+function debounceRender(input){
+  clearTimeout(dT);
+  dT=setTimeout(()=>{
+    const id=input.id, pos=input.selectionStart;
+    render();
+    const el=document.getElementById(id);
+    if(el){ el.focus(); try{ el.setSelectionRange(pos,pos); }catch(e){} }
+  },180);
+}
+
+function addPayment(i){
+  const v=Store.state.vendors[i];
+  const raw=prompt(`תשלום ל${v.name}\nנשאר לשלם: ${money(calc.remainOf(v))}\n\nסכום:`);
+  if(raw===null) return;
+  const amt=Number(String(raw).replace(/[^\d.-]/g,''));
+  if(!amt||isNaN(amt)) return toast('סכום לא תקין');
+  const method=prompt('אמצעי תשלום (מזומן / צ׳ק / העברה / אשראי):','צ׳ק')||null;
+  Store.update(s=>{ s.vendors[i].payments.push({date:todayISO(),amount:amt,method,note:null}); });
+  toast(`נרשם תשלום ${money(amt)}`);
+}
+
+function addLoan(key){
+  const name=prompt('שם ההלוואה:'); if(!name) return;
+  const amount=Number(prompt('סכום (₪):','100000')); if(!amount) return;
+  const months=Number(prompt('תקופה בחודשים:','60'))||60;
+  const fr=Number(prompt('ריבית שנתית קבועה (%):','5'))||0;
+  const start=prompt('תאריך תשלום ראשון (YYYY-MM-DD, ריק אם עוד לא התחילה):','')||null;
+  Store.update(s=>{ s.capital[key].loans.push({name:name.trim(),amount,months,fr,start}); });
+  toast('ההלוואה נוספה');
+}
+
+/* ------------------------------------------------------------ data dialog  */
+async function dataAction(act){
+  const dlg=$('#dataDlg');
+  if(act==='close') return dlg.close();
+
+  if(act==='task-new'){
+    $('#topicList').innerHTML=[...new Set((Store.state.tasks||[]).map(t=>t.topic).filter(Boolean))]
+      .sort().map(x=>`<option value="${esc(x)}">`).join('');
+    $('#tNew').value=''; $('#tTopic').value=''; $('#tDue').value='';
+    $('#taskDlg').showModal();
+    return;
+  }
+  if(act==='task-cancel') return $('#taskDlg').close();
+
+  if(act==='check-new'){
+    $('#ckVendor').innerHTML=Store.state.vendors.map((v,i)=>
+      `<option value="${i}">${esc(v.name)}</option>`).join('');
+    $('#ckName').value=''; $('#ckAmt').value=''; $('#ckDate').value=''; $('#ckDep').checked=false;
+    $('#checkDlg').showModal();
+    return;
+  }
+  if(act==='check-cancel') return $('#checkDlg').close();
+  if(act==='check-save'){
+    const vi=Number($('#ckVendor').value), amt=Number($('#ckAmt').value);
+    if(!amt) return toast('חסר סכום');
+    const name=$('#ckName').value.trim()||null, date=$('#ckDate').value||null, dep=$('#ckDep').checked;
+    Store.update(s=>{
+      const v=s.vendors[vi];
+      (v.checks=v.checks||[]).push({
+        id:(crypto.randomUUID?crypto.randomUUID():'c'+Date.now()),
+        name, amount:amt, dueDate:date, deposit:dep, payee:null,
+      });
+    });
+    $('#checkDlg').close();
+    return toast(`הצ׳ק נרשם${date?` · ${dLabel(date)}`:''}`);
+  }
+  if(act==='task-save'){
+    const title=$('#tNew').value.trim();
+    if(!title) return toast('חסר תיאור למשימה');
+    const topic=$('#tTopic').value.trim()||'כללי';
+    const due=$('#tDue').value||null;
+    Store.update(s=>{ s.tasks.push({
+      id:(crypto.randomUUID?crypto.randomUUID():'t'+Date.now()+Math.random().toString(36).slice(2)),
+      topic, title, status:'open', dueDate:due, daysBefore:null,
+      owner:null, notes:null, source:'נוסף באפליקציה',
+    }); });
+    $('#taskDlg').close();
+    return toast('המשימה נוספה'+(due?` · יעד ${dLabel(due)}`:''));
+  }
+
+  if(act==='gh-save'){
+    const t=$('#ghTok').value.trim();
+    // Always re-query #ghErr: syncPanel() rebuilds the panel, and a message
+    // written to the old node vanishes -- which made every failure look like
+    // the button simply did nothing.
+    const say=m=>{ const e=$('#ghErr'); if(e) e.textContent=m; };
+    if(!t) return say('חסר אסימון');
+    say('מתחבר…');
+    try{ Sync.saveToken(t); }
+    catch(e){ return say('המכשיר חוסם שמירה מקומית: '+e.message); }
+    try{
+      // A token that was not granted access to the data repo returns 404 on
+      // every call -- the same answer as "no file yet" -- so without this
+      // check it "connects" silently with zero data.
+      const repo=await Sync.api(`repos/${Sync.repo}`);
+      if(!repo){
+        Sync.forget(); syncPanel();
+        return say(`לאסימון אין גישה ל־${Sync.repo}. ביצירת האסימון: `+
+          `Repository access → Only select repositories → ourmoney-data, `+
+          `וגם Permissions → Contents → Read and write`);
+      }
+      await Sync.start();
+      if(Sync.lastError){ const msg=Sync.lastError; Sync.forget(); syncPanel(); return say(msg); }
+      syncPanel(); render();
+      toast(Store.state?`מסונכרן · ${Store.state.guests.length} אורחים`:'מחובר');
+    }catch(e){ Sync.forget(); syncPanel(); say(e.message); }
+    return;
+  }
+  if(act==='gh-forget'){ Sync.forget(); render(); return syncPanel(); }
+  if(act==='gh-now'){ await Sync.run(); syncPanel(); return toast(Sync.lastError||'סונכרן'); }
+  if(act==='gh-pull'){
+    const box=$('#sbDiag'); if(box) box.innerHTML='<p class="note">מוריד…</p>';
+    try{
+      const r=await Sync.fetchRemote();
+      if(!r) throw new Error('אין קובץ בשרת');
+      Store.state=r; Store.migrate(); Store.saveNow(); Sync.seedSnapshot(); render();
+      if(box) box.innerHTML='';
+      toast(`ירדו ${Store.state.guests.length} אורחים · ${Store.state.tasks.length} משימות`);
+    }catch(e){ if(box) box.innerHTML=`<div class="warnbox">${esc(e.message)}</div>`; }
+    return syncPanel();
+  }
+  if(act==='gh-upload'){
+    const gaps=Sync.looksPartial();
+    if(gaps.length&&!confirm('הנתונים כאן נראים חלקיים —\n· '+gaps.join('\n· ')+
+        '\n\nהעלאה תדרוס את השרת. להמשיך?')) return;
+    const box=$('#sbDiag'); if(box) box.innerHTML='<p class="note">מעלה…</p>';
+    try{ await Sync.uploadAll(); if(box) box.innerHTML=
+      '<div class="warnbox" style="background:var(--good-dim);border-color:var(--good);color:var(--good-2)">הועלה בהצלחה ✓</div>'; }
+    catch(e){ if(box) box.innerHTML=`<div class="warnbox">${esc(e.message)}</div>`; }
+    return;
+  }
+  if(act==='gh-diag'){
+    const box=$('#sbDiag'); box.innerHTML='<p class="note">בודק…</p>';
+    try{
+      const d=await Sync.diagnose();
+      const he={guests:'אורחים',vendors:'ספקים',tasks:'משימות',payments:'תשלומים'};
+      if(!d.server){ box.innerHTML='<div class="warnbox">אין עדיין קובץ בשרת</div>'; return; }
+      box.innerHTML=`<table style="margin-top:.6rem"><thead><tr>
+          <th>טבלה</th><th class="num">במכשיר</th><th class="num">בשרת</th></tr></thead><tbody>
+        ${Object.keys(he).map(k=>{
+          const l=d.local?d.local[k]:0, sv=d.server[k];
+          const ok=l===sv&&sv>0;
+          return `<tr><td>${he[k]}</td>
+            <td class="num" style="color:${l>0?'var(--ink)':'var(--bad-2)'}">${l}</td>
+            <td class="num" style="color:${ok?'var(--good-2)':'var(--bad-2)'}">${sv}</td></tr>`;
+        }).join('')}
+        <tr><td>תאריך חתונה בשרת</td><td class="num">—</td>
+          <td class="num" style="color:${d.serverDate?'var(--good-2)':'var(--bad-2)'}">
+          ${esc(d.serverDate||'חסר')}</td></tr>
+        </tbody></table>`;
+    }catch(e){ box.innerHTML=`<div class="warnbox">${esc(e.message)}</div>`; }
+    return;
+  }
+
+  if(act==='export'){ Store.backup('ייצוא ידני'); return Store.exportFile(); }
+  if(act==='import') return $('#fileIn').click();
+  if(act==='reset'){
+    if(!confirm('לאפס את כל הנתונים חזרה למה שהיה באקסל?\nכל המתנות והתשלומים שהוזנו כאן יימחקו.\nמומלץ לייצא גיבוי קודם.')) return;
+    Store.backup('לפני איפוס');
+    Store.state=structuredClone(window.SEED); Store.migrate(); Store.saveNow(); render();
+    return toast('אופס לנתוני האקסל');
+  }
+  if(act==='restore'){
+    const list=Store.backups();
+    if(!list.length) return toast('אין גיבויים');
+    const pick=prompt('איזה גיבוי לשחזר?\n'+
+      list.map((b,i)=>`${i+1}. ${new Date(b.ts).toLocaleString('he-IL')} — ${b.reason}`).join('\n'),'1');
+    const i=Number(pick)-1;
+    if(!(i>=0&&i<list.length)) return;
+    try{ Store.importObj(JSON.parse(list[i].json)); dlg.close(); }
+    catch(e){ toast('שחזור נכשל: '+e.message); }
+  }
+}
+
+function syncPanel(){
+  const el=$('#syncPanel'); if(!el) return;
+  if(!Sync.on){
+    el.innerHTML=`
+      <p class="note" style="margin-bottom:.6rem">
+        הנתונים נשמרים ב־repo פרטי: <b dir="ltr">${esc(Sync.repo)}</b>.
+        צריך אסימון גישה פעם אחת בכל מכשיר.</p>
+      <details class="acc" open><summary>איך מייצרים אסימון (30 שניות)</summary><div>
+        <ol class="note" style="padding-inline-start:1.1rem;line-height:1.9">
+          <li>נכנסים ל־<a href="https://github.com/settings/personal-access-tokens/new"
+              target="_blank" rel="noopener" dir="ltr">github.com/settings/personal-access-tokens/new</a></li>
+          <li><b>Token name:</b> <code dir="ltr">ourmoney</code></li>
+          <li><b>Expiration:</b> 90 days</li>
+          <li><b>Repository access:</b> Only select repositories →
+              <code dir="ltr">ourmoney-data</code></li>
+          <li><b>Permissions</b> → Repository permissions →
+              <b>Contents</b> → <code dir="ltr">Read and write</code></li>
+          <li>Generate token → להעתיק (מתחיל ב־<code dir="ltr">github_pat_</code>)</li>
+        </ol>
+        <p class="note" style="color:var(--warn-2)">
+          האסימון נשמר במכשיר הזה בלבד. אין לשלוח אותו לאף אחד — אם נחשף,
+          מוחקים אותו באותו עמוד ומייצרים חדש.</p>
+      </div></details>
+      <label class="fld" style="margin:.6rem 0"><span>GitHub token</span>
+        <input type="password" id="ghTok" dir="ltr" placeholder="github_pat_…"
+               autocomplete="off"></label>
+      <button class="btn btn-p" style="width:100%" data-act="gh-save">חיבור</button>
+      <p class="note" id="ghErr" style="color:var(--bad-2);margin-top:.5rem"></p>`;
+    return;
+  }
+  const st={ok:'מסונכרן',syncing:'מסנכרן…',error:'שגיאה: '+(Sync.lastError||''),
+             idle:'ממתין',off:'כבוי'}[Sync.status]||'';
+  el.innerHTML=`
+    <p class="note" style="margin-bottom:.6rem">
+      מחובר אל <b dir="ltr">${esc(Sync.repo)}</b><br>סטטוס: ${esc(st)}</p>
+    <button class="btn btn-o" style="width:100%" data-act="gh-now">סנכרון עכשיו</button>
+    <button class="btn btn-o" style="width:100%;margin-top:.4rem" data-act="gh-pull">משיכה מהשרת</button>
+    <button class="btn btn-o" style="width:100%;margin-top:.4rem" data-act="gh-diag">בדיקה: מה יש בשרת</button>
+    <div id="sbDiag"></div>
+    <button class="btn btn-o" style="width:100%;margin-top:.4rem" data-act="gh-upload">העלאת הכול לשרת</button>
+    <button class="btn btn-d" style="width:100%;margin-top:.4rem" data-act="gh-forget">ניתוק</button>`;
+}
+
+document.getElementById('dataBtn').onclick=()=>{
+  const b=Store.backups();
+  $('#dataMeta').innerHTML=
+    `<b>גרסה ${BUILD}</b><br>`+
+    `גיבויים אוטומטיים: ${b.length}${b.length?` · אחרון ${new Date(b[0].ts).toLocaleString('he-IL')}`:''}<br>`+
+    (Sync.on?'הנתונים מסונכרנים בין המכשירים.'
+            :'הנתונים נשמרים בדפדפן הזה בלבד. כדי להעביר למכשיר אחר — ייצאו JSON.');
+  syncPanel();
+  $('#dataDlg').showModal();
+};
+
+document.getElementById('fileIn').onchange=e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=()=>{ try{ Store.importObj(JSON.parse(r.result)); $('#dataDlg').close(); }
+                 catch(err){ alert('ייבוא נכשל: '+err.message); } };
+  r.readAsText(f);
+  e.target.value='';
+};
+
+/* -------------------------------------------------------------- theme, go  */
+function applyTheme(t){
+  document.documentElement.dataset.theme=t;
+  try{ localStorage.setItem(THEME_KEY,t); }catch(e){}
+}
+document.getElementById('themeBtn').onclick=()=>
+  applyTheme(document.documentElement.dataset.theme==='light'?'dark':'light');
+try{ applyTheme(localStorage.getItem(THEME_KEY)||
+     (matchMedia('(prefers-color-scheme: light)').matches?'light':'dark')); }catch(e){}
+
+addEventListener('beforeunload',()=>{ if(Store.state) Store.saveNow(); });
+
+// A rejected promise nobody awaited used to die in silence; on a phone that
+// reads as "the button does nothing". Surface it.
+addEventListener('unhandledrejection',e=>{
+  toast('שגיאה: '+((e.reason&&e.reason.message)||e.reason||'לא ידועה'));
+});
+
+/* ------------------------------------------------------------ auto-update  *
+ * iOS home-screen apps keep serving a cached copy long after a new build is
+ * published; data syncs but the UI stays old. Poll our own URL and offer a
+ * one-tap reload when the served BUILD differs from the running one.
+ */
+async function checkUpdate(){
+  if(location.protocol==='file:') return;
+  try{
+    const r=await fetch(location.href,{cache:'no-store'});
+    const m=(await r.text()).match(/BUILD='([^']+)'/);
+    if(m&&m[1]!==BUILD&&!document.getElementById('updBar')){
+      const d=document.createElement('div');
+      d.id='updBar';
+      d.style.cssText='position:fixed;inset-inline:0;top:calc(env(safe-area-inset-top) + 56px);'+
+        'z-index:98;display:flex;justify-content:center;pointer-events:none';
+      d.innerHTML=`<button style="pointer-events:auto;background:var(--brand);color:#fff;`+
+        `border-radius:999px;padding:.5rem 1.1rem;font-weight:700;font-size:.85rem;`+
+        `box-shadow:var(--shadow)">יש גרסה חדשה (${esc(m[1])}) — לחצו לרענון</button>`;
+      d.querySelector('button').onclick=()=>location.reload();
+      document.body.appendChild(d);
+    }
+  }catch(e){ /* offline — try again next round */ }
+}
+setInterval(checkUpdate,10*60*1000);
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) checkUpdate(); });
+checkUpdate();
+
+// The hosted build has no data.js, so <html dir> may not be ours to set.
+document.documentElement.dir='rtl';
+document.documentElement.lang='he';
+
+const booted=Store.boot();
+if(booted) Store.backup('פתיחת אפליקציה');
+render();
+
+Sync.load();
+Sync.setStatus(Sync.status);
+if(Sync.on) Sync.start();
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) Sync.nudge(); });
+</script>
+</body>
+</html>
