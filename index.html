@@ -1,0 +1,3720 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark light">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="OurMoney">
+<meta name="theme-color" content="#131016">
+<title>OurMoney</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800;900&family=Frank+Ruhl+Libre:wght@700;900&display=swap">
+<!--
+  App chrome is self-contained. Payslip OCR loads pdf.js / Tesseract from a
+  CDN only after the user taps «הוספת תלוש». Guest data lives in data.js.
+-->
+<style>
+/* ============================================================ design system
+   «Midnight plum & champagne» — deep plum-ink surfaces, champagne-gold brand,
+   rose accent. Heebo carries the UI; Frank Ruhl Libre marks the wordmark and
+   the hero. All colors flow from these tokens — the JS reads them too. */
+:root{
+  --bg:#131016; --bg-elev:#191521; --card:#1d1826; --card-2:#272033;
+  --line:#332b42; --line-2:#463b58;
+  --ink:#f3eef8; --ink-2:#c8bdd6; --ink-3:#9b8fa8;
+  --brand:#e2ba7f; --brand-2:#f0d6a8; --brand-dim:rgba(226,186,127,.14);
+  --on-brand:#221809;
+  --good:#79c692; --good-2:#a5e0b8; --good-dim:rgba(121,198,146,.14);
+  --bad:#e28379; --bad-2:#f2a89f; --bad-dim:rgba(226,131,121,.14);
+  --warn:#dfb066; --warn-2:#efd095; --warn-dim:rgba(223,176,102,.14);
+  --plum:#d795a8;
+  --r:12px; --r-lg:18px; --r-xl:26px;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 20px 50px -20px rgba(0,0,0,.55);
+  --tap:44px;
+  --ease:cubic-bezier(.2,.7,.3,1);
+}
+:root[data-theme="light"]{
+  --bg:#f8f3ee; --bg-elev:#fffdfb; --card:#fffdfb; --card-2:#f1e9e2;
+  --line:#e7dcd2; --line-2:#d6c7ba;
+  --ink:#2a2230; --ink-2:#585062; --ink-3:#7d7488;
+  --brand:#8a6224; --brand-2:#6f4e1d; --brand-dim:rgba(138,98,36,.11);
+  --on-brand:#fff9f2;
+  --good:#2f6b4a; --good-2:#25573b; --good-dim:rgba(47,107,74,.11);
+  --bad:#b2423c; --bad-2:#8f322d; --bad-dim:rgba(178,66,60,.11);
+  --warn:#8a6224; --warn-2:#6f4e1d; --warn-dim:rgba(138,98,36,.11);
+  --plum:#96586c;
+  --shadow:0 1px 2px rgba(42,34,48,.05),0 16px 36px -18px rgba(42,34,48,.16);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+/* Any element wider than the viewport makes iOS scale the layout viewport,
+   which pushes the fixed bottom nav off screen. clip, not hidden: hidden
+   turns body into a scroll container and breaks position:sticky. */
+html,body{overflow-x:hidden;overflow-x:clip;max-width:100%}
+body{
+  font-family:"Heebo",-apple-system,BlinkMacSystemFont,"SF Hebrew","Arial Hebrew",
+              "Segoe UI",Rubik,Arial,sans-serif;
+  background:
+    radial-gradient(900px 480px at 12% -8%, var(--brand-dim), transparent 58%),
+    radial-gradient(700px 420px at 110% 8%, color-mix(in srgb,var(--plum) 16%,transparent), transparent 52%),
+    var(--bg);
+  color:var(--ink);
+  font-size:15px; line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+  padding-bottom:calc(72px + env(safe-area-inset-bottom));
+}
+@media(min-width:860px){body{padding-bottom:2rem}}
+button,input,select,textarea{font:inherit;color:inherit}
+button{background:none;border:none;cursor:pointer}
+a{color:var(--brand-2)}
+::selection{background:color-mix(in srgb,var(--brand) 32%,transparent)}
+:focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
+
+/* ==================================================================== chrome */
+.topbar{
+  position:sticky; top:0; z-index:40;
+  background:color-mix(in srgb,var(--bg) 86%,transparent);
+  backdrop-filter:saturate(180%) blur(16px);
+  -webkit-backdrop-filter:saturate(180%) blur(16px);
+  border-bottom:1px solid var(--line);
+  padding:calc(.55rem + env(safe-area-inset-top)) max(1rem,env(safe-area-inset-right)) .55rem max(1rem,env(safe-area-inset-left));
+  display:flex; align-items:center; gap:.75rem;
+}
+.brand{
+  font-family:"Frank Ruhl Libre",Georgia,serif;
+  font-weight:900;font-size:1.08rem;letter-spacing:.01em;white-space:nowrap;
+  background:linear-gradient(100deg,var(--brand-2),var(--brand) 55%,var(--plum));
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.brand small{
+  display:block;font-family:"Heebo",-apple-system,sans-serif;font-weight:500;
+  font-size:.68rem;color:var(--ink-3);letter-spacing:0;
+  -webkit-text-fill-color:var(--ink-3);
+}
+.countdown{
+  margin-inline-start:auto; display:flex; align-items:baseline; gap:.35rem;
+  background:var(--brand-dim); border:1px solid color-mix(in srgb,var(--brand) 32%,transparent);
+  color:var(--brand-2); padding:.3rem .7rem; border-radius:999px;
+  font-weight:700; font-size:.82rem; white-space:nowrap;
+}
+.countdown b{font-size:1rem}
+/* The topbar is the one row that must never wrap: brand + pill + up to three
+   icon buttons overflow 375px unless everything shrinks together. */
+@media(max-width:600px){
+  .topbar{gap:.45rem}
+  .brand{font-size:.98rem}
+  .brand small{display:none}
+  .iconbtn{width:38px}
+  .countdown{font-size:.74rem;padding:.25rem .55rem}
+  .cd-x{display:none}
+}
+/* stacked mobile row replacing a wide table row */
+.grow{padding:.65rem 0;border-bottom:1px solid var(--line)}
+.grow:last-child{border-bottom:none}
+.iconbtn{
+  width:var(--tap);height:36px;display:grid;place-items:center;border-radius:var(--r);
+  color:var(--ink-2);border:1px solid var(--line);background:var(--card);
+  transition:color .18s var(--ease),border-color .18s var(--ease),background .18s var(--ease);
+}
+.iconbtn:hover{color:var(--brand-2);border-color:var(--line-2);background:var(--card-2)}
+.iconbtn:active{transform:scale(.94)}
+
+/* desktop tabs */
+.tabs{
+  display:none; gap:2px; padding:.3rem; margin:1rem auto 0; max-width:1180px;
+  background:color-mix(in srgb,var(--card) 82%,transparent);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  border:1px solid var(--line); border-radius:var(--r-lg);
+  box-shadow:var(--shadow);
+}
+@media(min-width:860px){.tabs{display:flex}}
+.tabs button{
+  flex:1; padding:.6rem .5rem; border-radius:calc(var(--r-lg) - 5px);
+  font-weight:600; font-size:.85rem; color:var(--ink-3);
+  transition:color .18s var(--ease),background .18s var(--ease);
+}
+.tabs button:hover{color:var(--ink-2);background:var(--card-2)}
+.tabs button[aria-selected="true"]{
+  background:linear-gradient(135deg,var(--brand-2),var(--brand));
+  color:var(--on-brand);font-weight:700;
+  box-shadow:0 2px 10px -2px color-mix(in srgb,var(--brand) 45%,transparent);
+}
+
+/* mobile bottom nav */
+.botnav{
+  position:fixed; inset-inline:0; bottom:0; z-index:50;
+  display:flex;
+  background:color-mix(in srgb,var(--bg-elev) 92%,transparent);
+  backdrop-filter:saturate(180%) blur(16px);
+  -webkit-backdrop-filter:saturate(180%) blur(16px);
+  border-top:1px solid var(--line);
+  padding-bottom:env(safe-area-inset-bottom);
+}
+@media(min-width:860px){.botnav{display:none}}
+.botnav button{
+  flex:1; margin:.3rem .25rem; padding:.35rem .1rem .3rem;
+  display:flex; flex-direction:column;
+  align-items:center; gap:2px; font-size:.62rem; font-weight:600;
+  color:var(--ink-3); min-height:var(--tap); border-radius:12px;
+  transition:color .18s var(--ease),background .18s var(--ease);
+}
+.botnav button svg{width:21px;height:21px}
+.botnav button:active{transform:scale(.93)}
+.botnav button[aria-selected="true"]{
+  color:var(--brand-2);background:var(--brand-dim);font-weight:700;
+}
+
+.wrap{max-width:1180px;margin:0 auto;padding:1rem max(.85rem,env(safe-area-inset-right)) 1rem max(.85rem,env(safe-area-inset-left))}
+.view{display:none;animation:in .26s var(--ease)}
+.view.on{display:block}
+@keyframes in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* =================================================================== pieces */
+.card{
+  background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);
+  padding:1rem;box-shadow:0 1px 2px rgba(0,0,0,.08);
+}
+.card+.card{margin-top:.85rem}
+.card-h{display:flex;align-items:center;gap:.5rem;margin-bottom:.85rem;flex-wrap:wrap}
+.card-h h2{font-size:.78rem;font-weight:700;color:var(--ink-3);letter-spacing:.06em;text-transform:uppercase}
+.card-h .sp{margin-inline-start:auto}
+.dot{width:7px;height:7px;border-radius:50%;flex:none;box-shadow:0 0 8px currentColor}
+
+.grid{display:grid;gap:.7rem}
+.g2{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(155px,1fr))}
+
+.stat{
+  background:linear-gradient(165deg,color-mix(in srgb,var(--c,var(--brand)) 7%,var(--card)),var(--card) 55%);
+  border:1px solid var(--line);border-radius:var(--r-lg);
+  padding:.85rem .95rem;position:relative;overflow:hidden;
+  transition:border-color .18s var(--ease),transform .18s var(--ease);
+}
+.stat::before{
+  content:"";position:absolute;inset-block:0;inset-inline-start:0;width:3px;
+  background:linear-gradient(180deg,var(--c,var(--brand)),color-mix(in srgb,var(--c,var(--brand)) 35%,transparent));
+}
+.stat .k{font-size:.72rem;color:var(--ink-3);font-weight:600;margin-bottom:.3rem}
+.stat .v{font-size:1.42rem;font-weight:800;letter-spacing:-.02em;color:var(--c,var(--ink));font-variant-numeric:tabular-nums}
+.stat .s{font-size:.7rem;color:var(--ink-3);margin-top:.15rem}
+@media(max-width:520px){.stat .v{font-size:1.22rem}}
+button.stat{font:inherit;color:inherit;text-align:start;width:100%}
+@media(hover:hover){
+  button.stat:hover{border-color:var(--line-2);transform:translateY(-1px)}
+}
+button.stat[aria-pressed="true"]{outline:2px solid var(--c,var(--brand));outline-offset:1px}
+
+.bar{height:9px;border-radius:99px;background:var(--card-2);overflow:hidden;display:flex}
+.bar i{display:block;height:100%}
+.chips{display:flex;gap:.4rem;flex-wrap:wrap}
+.chip{
+  padding:.32rem .7rem;border-radius:999px;border:1px solid var(--line);
+  background:var(--card);color:var(--ink-2);font-size:.78rem;font-weight:600;
+  white-space:nowrap; min-height:32px;
+  transition:background .18s var(--ease),border-color .18s var(--ease),color .18s var(--ease);
+}
+.chip:hover{border-color:var(--line-2)}
+.chip[aria-pressed="true"]{
+  background:linear-gradient(135deg,var(--brand-2),var(--brand));
+  border-color:transparent;color:var(--on-brand);font-weight:700;
+}
+.chip.sm{font-size:.7rem;padding:.15rem .5rem;min-height:0}
+
+.tag{display:inline-block;padding:.12rem .48rem;border-radius:6px;font-size:.68rem;font-weight:700;white-space:nowrap}
+.t-good{background:var(--good-dim);color:var(--good-2)}
+.t-bad{background:var(--bad-dim);color:var(--bad-2)}
+.t-warn{background:var(--warn-dim);color:var(--warn-2)}
+.t-mute{background:var(--card-2);color:var(--ink-3)}
+.t-brand{background:var(--brand-dim);color:var(--brand-2)}
+
+.btn{
+  padding:.55rem 1.1rem;border-radius:var(--r);font-weight:700;font-size:.85rem;
+  border:1px solid transparent;min-height:38px;
+  transition:filter .18s var(--ease),border-color .18s var(--ease),color .18s var(--ease),transform .12s var(--ease);
+}
+.btn:active{transform:scale(.97)}
+.btn-p{
+  background:linear-gradient(135deg,var(--brand-2),var(--brand));color:var(--on-brand);
+  box-shadow:0 2px 12px -3px color-mix(in srgb,var(--brand) 50%,transparent);
+}
+.btn-p:hover{filter:brightness(1.07)}
+.btn-o{border-color:var(--line-2);color:var(--ink-2);background:var(--card)}
+.btn-o:hover{border-color:var(--brand);color:var(--brand-2)}
+.btn-d{border-color:var(--line-2);color:var(--bad-2);background:var(--card)}
+.btn-d:hover{border-color:var(--bad);background:var(--bad-dim)}
+.btn.sm{padding:.3rem .7rem;font-size:.76rem;min-height:32px}
+
+input[type=text],input[type=number],input[type=search],input[type=date],input[type=tel],select,textarea{
+  width:100%;padding:.5rem .65rem;background:var(--bg-elev);border:1px solid var(--line-2);
+  border-radius:var(--r);outline:none;font-size:.88rem;min-height:38px;
+  transition:border-color .18s var(--ease),box-shadow .18s var(--ease);
+}
+input:focus,select:focus,textarea:focus{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-dim)}
+input[type=number]{font-variant-numeric:tabular-nums;-moz-appearance:textfield}
+input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+input[type=range]{
+  -webkit-appearance:none;appearance:none;width:100%;height:6px;padding:0;border:none;
+  background:var(--line-2);border-radius:99px;min-height:0;box-shadow:none
+}
+input[type=range]:focus{box-shadow:none}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:22px;height:22px;border-radius:50%;
+  background:linear-gradient(135deg,var(--brand-2),var(--brand));border:3px solid var(--bg);cursor:pointer;
+  box-shadow:0 1px 6px rgba(0,0,0,.4)
+}
+input[type=range]::-moz-range-thumb{
+  width:20px;height:20px;border-radius:50%;background:var(--brand);
+  border:3px solid var(--bg);cursor:pointer
+}
+label.fld{display:block}
+label.fld span{display:block;font-size:.7rem;color:var(--ink-3);font-weight:600;margin-bottom:.25rem}
+/* iOS zooms the whole page when focusing any input whose font is under 16px,
+   and the zoom sticks -- that is the sideways scrolling on the phone.
+   Must come after the base input rules above to win the cascade. */
+@media(max-width:680px){
+  input[type=text],input[type=number],input[type=search],input[type=date],input[type=tel],select,textarea{font-size:16px}
+  details.acc table{font-size:.76rem}
+  details.acc td,details.acc th{padding:.4rem .35rem}
+}
+
+.search{position:relative}
+.search svg{position:absolute;inset-inline-start:.6rem;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--ink-3);pointer-events:none}
+.search input{padding-inline-start:2.1rem}
+
+/* tables */
+.tscroll{overflow-x:auto;-webkit-overflow-scrolling:touch;margin-inline:-1rem;padding-inline:1rem}
+table{width:100%;border-collapse:collapse;font-size:.85rem}
+th{
+  position:sticky;top:0;z-index:5;text-align:start;padding:.55rem .6rem;
+  background:var(--card-2);color:var(--ink-3);font-size:.7rem;font-weight:700;
+  text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;
+  border-bottom:1px solid var(--line);
+}
+td{padding:.55rem .6rem;border-bottom:1px solid var(--line);vertical-align:middle}
+@media(hover:hover){tbody tr:hover td{background:var(--card-2)}}
+tbody tr:last-child td{border-bottom:none}
+.num{text-align:end;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tot td{background:var(--card-2)!important;font-weight:800;border-top:2px solid var(--line-2)}
+
+/* row list (mobile-friendly alternative to tables) */
+.row{display:flex;align-items:center;gap:.6rem;padding:.62rem 0;border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:none}
+.row .main{flex:1;min-width:0}
+.row .name{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .sub{font-size:.72rem;color:var(--ink-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .val{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+
+.empty{text-align:center;color:var(--ink-3);padding:2rem 1rem;font-size:.85rem}
+.note{font-size:.74rem;color:var(--ink-3);line-height:1.65}
+.row .sub{margin-top:2px;line-height:1.55}
+/* blocks with several stacked info lines (loans, contributions, vendor notes):
+   air between the lines instead of a wall of text */
+.spaced>.note{margin-top:.45rem;line-height:1.85}
+.spaced .inln{margin-block:3px}
+.warnbox{background:var(--warn-dim);border:1px solid color-mix(in srgb,var(--warn) 32%,transparent);
+  border-radius:var(--r);padding:.6rem .75rem;font-size:.76rem;color:var(--warn-2)}
+
+/* gifts fast entry */
+/* who | amount | method + received. The last cell is one flex row on every
+   width; on a phone it drops under the name to keep the amount box wide. */
+.gift-row{display:grid;grid-template-columns:minmax(70px,max-content) 170px auto 1fr;gap:.6rem;align-items:center;
+  padding:.55rem 0;border-bottom:1px solid var(--line)}
+.gift-row .amt input{min-height:42px;font-size:1.05rem;font-weight:700;font-variant-numeric:tabular-nums}
+.gift-row .meta{display:flex;gap:.5rem;align-items:center}
+.gift-row .meta select{min-width:110px;min-height:42px}
+.gift-row .meta .check{width:42px;height:42px}
+@media(max-width:600px){
+  .gift-row{grid-template-columns:1fr 92px;grid-template-areas:"who amt" "meta meta";row-gap:.4rem}
+  .gift-row .who{grid-area:who}.gift-row .amt{grid-area:amt}
+  .gift-row .meta{grid-area:meta}
+  .gift-row .meta select{flex:1}
+}
+.gift-row.done{opacity:.55}
+/* payment plan: inline method / date editors on a row */
+select.celltxt,input.celltxt{width:auto;min-height:30px;padding:.15rem .4rem;font-size:.78rem}
+input.celltxt[type=date]{width:138px}
+.row.plan{padding-block:.6rem;gap:.45rem;flex-wrap:wrap}
+.row.plan .main{min-width:140px}
+.row.plan .late .tag{background:var(--bad-dim);color:var(--bad-2)}
+/* payment history under a vendor: long notes wrap instead of being clipped */
+.grow details.acc .row .sub{white-space:normal;overflow:visible}
+/* gift slots nested under their guest (one line per seat) */
+.gslots{margin-top:.4rem;padding-inline-start:.5rem;border-inline-start:2px solid var(--line)}
+.gslots .gift-row{padding:.35rem 0;border-bottom:1px dashed var(--line)}
+.gslots .gift-row:last-child{border-bottom:none}
+.gsum{font-size:.76rem;color:var(--ink-3);margin-top:.35rem;display:flex;gap:.6rem;flex-wrap:wrap;align-items:baseline}
+.gsum b{font-variant-numeric:tabular-nums}
+.grow[hidden]{display:none}
+.gslots .gift-row .who .name{font-size:.84rem;font-weight:500;color:var(--ink-2)}
+body.hall .gslots .gift-row .who .name{font-size:1rem;font-weight:600;color:var(--ink)}
+.check{width:34px;height:34px;border-radius:9px;border:1px solid var(--line-2);
+  display:grid;place-items:center;color:var(--ink-3);flex:none;cursor:pointer;
+  transition:background .15s var(--ease),border-color .15s var(--ease),color .15s var(--ease)}
+.check:active{transform:scale(.9)}
+.check[aria-pressed="true"]{background:var(--good);border-color:var(--good);color:#fff}
+.check.no[aria-pressed="true"]{background:var(--bad);border-color:var(--bad);color:#fff}
+.rsvp-pair{display:flex;gap:.4rem;flex:none}
+
+.stickybar{
+  margin-top:.85rem;background:var(--card);
+  border:1px solid var(--line);border-radius:var(--r-lg);padding:.65rem .9rem;
+  display:flex;gap:1rem;flex-wrap:wrap
+}
+.stickybar div{font-size:.72rem;color:var(--ink-3);font-weight:600}
+.stickybar b{display:block;font-size:1.05rem;color:var(--ink);font-variant-numeric:tabular-nums}
+
+details.acc{border:1px solid var(--line);border-radius:var(--r);margin-top:.5rem;background:var(--bg-elev)}
+details.acc>summary{padding:.5rem .7rem;cursor:pointer;font-size:.8rem;font-weight:600;color:var(--brand-2);list-style:none}
+details.acc>summary::-webkit-details-marker{display:none}
+details.acc>div{padding:0 .7rem .7rem;max-height:280px;overflow:auto}
+
+dialog{
+  /* the global margin reset also zeroes the UA's margin:auto, which is what
+     centres a modal; without this it sits in the top corner on a wide screen */
+  margin:auto;
+  border:1px solid var(--line-2);background:var(--card);color:var(--ink);
+  border-radius:var(--r-xl);padding:1.1rem;max-width:min(440px,92vw);width:100%;
+  box-shadow:var(--shadow);max-height:90vh;overflow:auto
+}
+dialog::backdrop{background:rgba(10,7,14,.65);backdrop-filter:blur(5px)}
+dialog h3{font-size:1rem;margin-bottom:.8rem}
+
+.toast{
+  position:fixed;inset-inline:0;bottom:calc(84px + env(safe-area-inset-bottom));z-index:99;
+  display:flex;justify-content:center;pointer-events:none
+}
+.toast .toast-inner{
+  pointer-events:auto;display:flex;align-items:center;gap:.45rem;
+  background:var(--ink);color:var(--bg);padding:.4rem .4rem .4rem 1rem;
+  border-radius:999px;font-size:.8rem;font-weight:700;box-shadow:var(--shadow);
+  opacity:0;transform:translateY(8px);transition:.22s var(--ease);max-width:min(420px,92vw)
+}
+.toast.on .toast-inner{opacity:1;transform:none}
+.toast .toast-inner button{
+  background:var(--brand);color:var(--on-brand);border-radius:999px;padding:.28rem .75rem;
+  font-size:.76rem;font-weight:800;min-height:32px;flex:none
+}
+@media(min-width:860px){.toast{bottom:1.5rem}}
+
+.wa{
+  display:grid;place-items:center;width:34px;height:34px;flex:none;
+  border-radius:9px;border:1px solid color-mix(in srgb,var(--good) 40%,var(--line));
+  background:var(--good-dim);color:var(--good-2);text-decoration:none
+}
+.task-hit{cursor:pointer}
+.task-hit:active{background:var(--card-2)}
+
+body.hall .gift-row{padding:.85rem 0}
+body.hall .giftamt,body.hall .gift-row select,body.hall .gift-row .check{min-height:48px}
+body.hall .search input{min-height:52px}
+body.hall .hallbar{
+  background:linear-gradient(135deg,var(--brand-2),var(--brand));color:var(--on-brand);border-radius:var(--r-lg);
+  padding:.7rem .9rem;margin-bottom:.85rem;
+  display:flex;align-items:center;gap:.6rem;font-weight:800
+}
+
+/* countdown hero */
+.hero{
+  text-align:center;padding:1.7rem 1rem 1.4rem;margin-bottom:.85rem;
+  background:linear-gradient(145deg,var(--brand-dim),transparent 58%),
+             linear-gradient(320deg,color-mix(in srgb,var(--plum) 18%,transparent),transparent 52%),var(--card);
+  border:1px solid var(--line);border-radius:var(--r-xl);overflow:hidden;
+  position:relative;
+}
+.hero::after{
+  content:"";position:absolute;inset-inline:0;top:0;height:1px;
+  background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--brand) 55%,transparent),transparent);
+}
+.hero .n{
+  font-size:clamp(4.2rem,24vw,7.5rem);font-weight:900;line-height:.95;
+  letter-spacing:-.05em;font-variant-numeric:tabular-nums;
+  background:linear-gradient(90deg,var(--brand),var(--plum),var(--brand-2),var(--brand));
+  background-size:250% 100%;-webkit-background-clip:text;background-clip:text;
+  color:transparent;animation:shimmer 7s linear infinite
+}
+@keyframes shimmer{to{background-position:250% 0}}
+.hero .l{
+  font-family:"Frank Ruhl Libre",Georgia,serif;
+  font-size:1.14rem;font-weight:700;margin-top:.25rem
+}
+.hero .l .beat{display:inline-block;animation:beat 1.5s ease-in-out infinite}
+@keyframes beat{0%,100%{transform:scale(1)}30%{transform:scale(1.22)}}
+.hero .d{font-size:.8rem;color:var(--ink-3);margin-top:.25rem}
+/* a countdown reads like a clock — left to right even in RTL */
+.hero .units{display:flex;justify-content:center;gap:.55rem;margin:.1rem 0 .45rem;direction:ltr}
+.hero .unit{
+  min-width:5.4rem;padding:.55rem .65rem .45rem;
+  background:color-mix(in srgb,var(--bg) 45%,transparent);
+  border:1px solid var(--line);border-radius:var(--r-lg);
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+}
+.hero .unit .n{
+  font-size:clamp(2.3rem,11vw,3.6rem);letter-spacing:-.04em
+}
+.hero .unit .k{font-size:.72rem;font-weight:700;color:var(--ink-3);margin-top:.05rem}
+/* four units (days/hours/min/sec) must fit a 390px phone side by side */
+@media(max-width:560px){
+  .hero .units{gap:.35rem}
+  .hero .unit{min-width:4.2rem;padding:.45rem .35rem}
+  .hero .unit .n{font-size:clamp(1.9rem,9vw,2.6rem)}
+}
+
+.cap-hero{
+  text-align:center;padding:1.35rem 1rem 1.15rem;margin-bottom:.85rem;
+  background:linear-gradient(155deg,var(--brand-dim),transparent 60%),
+             linear-gradient(325deg,color-mix(in srgb,var(--plum) 10%,transparent),transparent 55%),var(--card);
+  border:1px solid var(--line);border-radius:var(--r-xl)
+}
+.cap-hero .k{font-size:.78rem;font-weight:700;color:var(--ink-3);letter-spacing:.04em}
+.cap-hero > .v{
+  font-size:clamp(2.4rem,10vw,3.6rem);font-weight:900;letter-spacing:-.04em;
+  font-variant-numeric:tabular-nums;line-height:1.05;margin:.15rem 0 .2rem;
+  color:var(--c,var(--brand-2))
+}
+.cap-hero .s{font-size:.78rem;color:var(--ink-3)}
+.cap-split{display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin-top:.95rem;text-align:start}
+.cap-split .box{
+  background:color-mix(in srgb,var(--bg) 45%,transparent);
+  border:1px solid var(--line);border-radius:var(--r-lg);padding:.7rem .8rem
+}
+.cap-split .k{font-size:.7rem;color:var(--ink-3);font-weight:700;margin-bottom:.15rem}
+.cap-split .v{font-size:1.25rem;font-weight:800;font-variant-numeric:tabular-nums}
+.ring-row{display:flex;align-items:center;gap:.85rem;margin-top:1rem;text-align:start}
+.ring{flex:none}
+.tl{display:flex;gap:.4rem;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:.15rem 0;margin-top:.85rem}
+.slip-prev{
+  display:block;width:100%;max-height:180px;object-fit:contain;margin-bottom:.7rem;
+  background:var(--bg);border:1px solid var(--line);border-radius:var(--r)
+}
+#slipDlg{max-width:min(520px,94vw)}
+.ocr-busy{color:var(--brand-2);font-weight:700}
+
+.inln{width:70px;display:inline-block;min-height:28px;padding:.15rem .4rem}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">OurMoney<small id="brandSub"></small></div>
+  <div class="countdown" id="countdown"></div>
+  <button class="iconbtn" id="syncPill" style="display:none;font-size:1rem;font-weight:800"
+          title="סנכרון" aria-label="מצב סנכרון"></button>
+  <button class="iconbtn" id="themeBtn" title="מצב תצוגה" aria-label="מצב תצוגה">
+    <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+  </button>
+  <button class="iconbtn" id="dataBtn" title="נתונים וגיבוי" aria-label="נתונים וגיבוי">
+    <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></svg>
+  </button>
+</header>
+
+<nav class="tabs" id="tabs" role="tablist"></nav>
+
+<main class="wrap" id="main"></main>
+
+<nav class="botnav" id="botnav" role="tablist"></nav>
+<div class="toast" id="toast"><div class="toast-inner"><span></span><button type="button" id="toastAct" hidden>ביטול</button></div></div>
+
+<dialog id="dataDlg">
+  <h3>נתונים וגיבוי</h3>
+  <div class="grid" style="gap:.5rem">
+    <button class="btn btn-o" data-act="export">ייצוא JSON (גיבוי)</button>
+    <button class="btn btn-o" data-act="import">ייבוא JSON</button>
+    <button class="btn btn-o" data-act="restore">שחזור מגיבוי אוטומטי</button>
+    <button class="btn btn-o" data-act="export-xlsx">ייצוא לאקסל — סיכום, אורחים ומתנות, ספקים</button>
+    <button class="btn btn-o" data-act="export-pdf">דו״ח PDF (נפתח להדפסה / שמירה)</button>
+    <button class="btn btn-d" data-act="reset">איפוס לנתוני האקסל</button>
+  </div>
+  <p class="note" style="margin-top:.8rem" id="dataMeta"></p>
+  <hr style="border:none;border-top:1px solid var(--line);margin:1rem 0">
+  <h3 style="margin-bottom:.6rem">סנכרון בין מכשירים</h3>
+  <div id="syncPanel"></div>
+  <button class="btn btn-p" style="width:100%;margin-top:.9rem" data-act="close">סגירה</button>
+  <input type="file" id="fileIn" accept="application/json,.json" hidden>
+</dialog>
+
+<dialog id="payDlg">
+  <h3 id="payDlgTitle">תשלום</h3>
+  <div class="grid" style="gap:.6rem">
+    <label class="fld"><span>ספק</span><select id="pyVendor"></select></label>
+    <label class="fld"><span>סכום (₪)</span><input type="number" id="pyAmt" inputmode="numeric"></label>
+    <div class="grid g2">
+      <label class="fld"><span>אמצעי</span><select id="pyMethod">
+        <option value="">לא נקבע</option>
+        <option value="transfer">העברה</option><option value="cash">מזומן</option>
+        <option value="check">צ׳ק</option><option value="credit">אשראי</option><option value="bit">ביט</option>
+      </select></label>
+      <label class="fld"><span>תאריך</span><input type="date" id="pyDate"></label>
+    </div>
+    <label class="fld"><span>הערה</span><input type="text" id="pyNote" autocomplete="off"></label>
+    <label style="display:flex;gap:.5rem;align-items:center;font-size:.85rem">
+      <input type="checkbox" id="pyPaid" style="width:auto;min-height:0">
+      כבר שולם</label>
+    <label style="display:flex;gap:.5rem;align-items:center;font-size:.85rem">
+      <input type="checkbox" id="pyDep" style="width:auto;min-height:0">
+      פיקדון / ביטחון — לא נספר בסכומים</label>
+  </div>
+  <div style="display:flex;gap:.5rem;margin-top:.9rem">
+    <button class="btn btn-p" style="flex:1" data-act="pay-save">שמירה</button>
+    <button class="btn btn-o" data-act="pay-cancel">ביטול</button>
+  </div>
+</dialog>
+
+<dialog id="vendorDlg">
+  <h3>הוצאה חדשה</h3>
+  <div class="grid" style="gap:.6rem">
+    <label class="fld"><span>על מה</span><input type="text" id="vnName" autocomplete="off" placeholder="למשל: מיניבוס לחברים"></label>
+    <label class="fld"><span>עלות (₪)</span><input type="number" id="vnTotal" inputmode="numeric"></label>
+    <div class="grid g2">
+      <label class="fld"><span>איך משלמים</span><select id="vnMethod">
+        <option value="">עוד לא נקבע</option>
+        <option value="transfer">העברה</option><option value="cash">מזומן</option>
+        <option value="check">צ׳ק</option><option value="credit">אשראי</option><option value="bit">ביט</option>
+      </select></label>
+      <label class="fld"><span>מתי</span><input type="date" id="vnDue"></label>
+    </div>
+    <label class="fld"><span>הערה</span><input type="text" id="vnNotes" autocomplete="off"></label>
+    <label style="display:flex;gap:.5rem;align-items:center;font-size:.85rem">
+      <input type="checkbox" id="vnPaid" style="width:auto;min-height:0">
+      כבר שולם במלואו</label>
+  </div>
+  <div style="display:flex;gap:.5rem;margin-top:.9rem">
+    <button class="btn btn-p" style="flex:1" data-act="vendor-save">הוספה</button>
+    <button class="btn btn-o" data-act="vendor-cancel">ביטול</button>
+  </div>
+</dialog>
+
+<dialog id="taskDlg">
+  <h3>משימה חדשה</h3>
+  <div class="grid" style="gap:.6rem">
+    <label class="fld"><span>מה צריך לעשות</span>
+      <input type="text" id="tNew" autocomplete="off"></label>
+    <label class="fld"><span>נושא</span>
+      <input type="text" id="tTopic" list="topicList" autocomplete="off">
+      <datalist id="topicList"></datalist></label>
+    <label class="fld"><span>תאריך יעד</span>
+      <input type="date" id="tDue"></label>
+  </div>
+  <div style="display:flex;gap:.5rem;margin-top:.9rem">
+    <button class="btn btn-p" style="flex:1" data-act="task-save">הוספה</button>
+    <button class="btn btn-o" data-act="task-cancel">ביטול</button>
+  </div>
+</dialog>
+
+<dialog id="guestDlg">
+  <h3 id="gDlgTitle">אורח חדש</h3>
+  <input type="hidden" id="gIdx" value="">
+  <div class="grid" style="gap:.6rem">
+    <label class="fld"><span>שם</span>
+      <input type="text" id="gName" autocomplete="off"></label>
+    <div class="grid g2">
+      <label class="fld"><span>צד</span>
+        <select id="gSide">
+          <option>חתן</option>
+          <option>כלה</option>
+          <option>חברים</option>
+        </select></label>
+      <label class="fld"><span>קבוצה</span>
+        <input type="text" id="gGroup" list="groupList" autocomplete="off">
+        <datalist id="groupList"></datalist></label>
+    </div>
+    <div class="grid g2">
+      <label class="fld"><span>מבוגרים</span>
+        <input type="number" id="gAd" inputmode="numeric" value="2" min="0"></label>
+      <label class="fld"><span>ילדים</span>
+        <input type="number" id="gCh" inputmode="numeric" value="0" min="0"></label>
+    </div>
+    <label class="fld"><span>טלפון</span>
+      <input type="tel" id="gPhone" dir="ltr" inputmode="tel" autocomplete="off"></label>
+    <label class="fld"><span>הערה</span>
+      <input type="text" id="gNotes" autocomplete="off"></label>
+  </div>
+  <div style="display:flex;gap:.5rem;margin-top:.9rem;flex-wrap:wrap">
+    <button class="btn btn-p" style="flex:1" data-act="guest-save">שמירה</button>
+    <button class="btn btn-o" data-act="guest-cancel">ביטול</button>
+    <button class="btn btn-d" id="gDelBtn" data-act="guest-del" hidden>מחיקה</button>
+  </div>
+</dialog>
+
+<dialog id="slipDlg">
+  <h3>תלוש שכר</h3>
+  <p class="note" id="slipStatus">צלמו את התלוש או העלו קובץ. המספרים נשמרים אחרי סקירה — הקובץ עצמו לא.</p>
+  <img id="slipPrev" class="slip-prev" alt="תצוגת התלוש" hidden>
+  <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.75rem">
+    <button class="btn btn-p sm" data-act="slip-cam">צלמו תלוש</button>
+    <button class="btn btn-o sm" data-act="slip-file">מהקבצים</button>
+  </div>
+  <input type="file" id="slipCam" accept="image/*" capture="environment" hidden>
+  <input type="file" id="slipPick" accept="image/*,application/pdf" hidden>
+  <div class="grid" style="gap:.55rem">
+    <label class="fld"><span>של מי</span>
+      <select id="slipPerson"></select></label>
+    <label class="fld"><span>חודש</span>
+      <input type="month" id="slipPeriod"></label>
+    <div class="grid g2">
+      <label class="fld"><span>ברוטו</span>
+        <input type="number" id="slipGross" inputmode="numeric"></label>
+      <label class="fld"><span>נטו</span>
+        <input type="number" id="slipNet" inputmode="numeric"></label>
+    </div>
+    <label class="fld"><span>שכר מבוטח</span>
+      <input type="number" id="slipInsured" inputmode="numeric"></label>
+    <div class="grid g2">
+      <label class="fld"><span>פנסיה עובד</span>
+        <input type="number" id="slipPenEmp" inputmode="numeric"></label>
+      <label class="fld"><span>פנסיה מעביד</span>
+        <input type="number" id="slipPenEr" inputmode="numeric"></label>
+    </div>
+    <label class="fld"><span>פיצויים</span>
+      <input type="number" id="slipSev" inputmode="numeric"></label>
+    <div class="grid g2">
+      <label class="fld"><span>קה״ש עובד</span>
+        <input type="number" id="slipKhEmp" inputmode="numeric"></label>
+      <label class="fld"><span>קה״ש מעביד</span>
+        <input type="number" id="slipKhEr" inputmode="numeric"></label>
+    </div>
+    <div class="grid g3">
+      <label class="fld"><span>מס הכנסה</span>
+        <input type="number" id="slipTax" inputmode="numeric"></label>
+      <label class="fld"><span>ביטוח לאומי</span>
+        <input type="number" id="slipNi" inputmode="numeric"></label>
+      <label class="fld"><span>בריאות</span>
+        <input type="number" id="slipHealth" inputmode="numeric"></label>
+    </div>
+    <details class="acc"><summary>עוד נתונים מהתלוש (רשות)</summary>
+      <div class="grid g3" style="margin-top:.45rem">
+        <label class="fld"><span>נק׳ זיכוי</span>
+          <input type="number" id="slipCredit" step="0.25" inputmode="decimal"></label>
+        <label class="fld"><span>יתרת חופשה</span>
+          <input type="number" id="slipVac" step="0.1" inputmode="decimal"></label>
+        <label class="fld"><span>יתרת מחלה</span>
+          <input type="number" id="slipSick" step="0.1" inputmode="decimal"></label>
+      </div>
+    </details>
+  </div>
+  <div style="display:flex;gap:.5rem;margin-top:.9rem;flex-wrap:wrap">
+    <button class="btn btn-p" style="flex:1" data-act="slip-save">שמירה</button>
+    <button class="btn btn-o" data-act="slip-cancel">ביטול</button>
+  </div>
+</dialog>
+
+<dialog id="slipDbDlg" style="max-width:min(680px,96vw)">
+  <h3>מאגר תלושים</h3>
+  <p class="note">כל התלושים שנשמרו. לחיצה על שורה פותחת אותה לעריכה.</p>
+  <div id="slipDbBody"></div>
+  <div style="display:flex;gap:.5rem;margin-top:.9rem;flex-wrap:wrap">
+    <button class="btn btn-o" data-act="slipdb-csv">ייצוא CSV</button>
+    <button class="btn btn-o" data-act="slipdb-close" style="margin-inline-start:auto">סגירה</button>
+  </div>
+</dialog>
+
+<script src="data.js"></script>
+<script>
+"use strict";
+/* ========================================================================== *
+ *  OurMoney — wedding + capital tracker
+ *  State lives in localStorage. Every write goes through Store.update() so
+ *  autosave and backups can never be bypassed.
+ * ========================================================================== */
+
+// Bumped on every publish. Shown in the data dialog so a device running a
+// stale cached copy can be identified instead of guessed at.
+const BUILD='2026-09-10-52';
+
+// Long data notes use " · " as a separator; on screen each part gets its own
+// line so the note reads as a list instead of a dense paragraph.
+const noteLines=s=>esc(s).replace(/ · /g,'<br>');
+const KEY='ourmoney/v1', BACKUP_KEY='ourmoney/backups', THEME_KEY='ourmoney/theme', HALL_KEY='ourmoney/hall';
+const MAX_BACKUPS=5;
+
+/* ------------------------------------------------------------------ format */
+const nf=new Intl.NumberFormat('he-IL',{maximumFractionDigits:0});
+const money=n=>(n==null||isNaN(n))?'—':'₪'+nf.format(Math.round(n));
+const moneyS=n=>(n==null||isNaN(n))?'—':(n<0?'−₪':'₪')+nf.format(Math.abs(Math.round(n)));
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const todayISO=()=>new Date().toISOString().slice(0,10);
+const dLabel=iso=>{ if(!iso) return '—';
+  const d=new Date(iso+'T00:00:00');
+  return d.toLocaleDateString('he-IL',{day:'numeric',month:'short'}); };
+const addDays=(iso,n)=>{ const d=new Date(iso+'T00:00:00'); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); };
+const liveGuests=()=>(Store.state.guests||[]).filter(g=>!g._deleted);
+// Vendors are soft-deleted too: the per-entity merge would resurrect a row
+// that is simply removed from the array, so a tombstone with a fresh _m is
+// the only deletion that survives a sync.
+const liveVendors=()=>(Store.state.vendors||[]).filter(v=>!v._deleted);
+const emptyGift=who=>({who:who||null,amount:null,method:null,received:false,date:null,note:null});
+const giftSnapSlot=x=>({who:x?.who??null,amount:x?.amount??null,method:x?.method??null,
+  received:!!x?.received,date:x?.date??null,note:x?.note??null});
+function parsePeople(name){
+  const n=String(name||'').trim();
+  if(!n) return [];
+  if(/משפחה/.test(n) && n.indexOf(',')<0) return [n];
+  if(n.indexOf(',')>=0)
+    return n.replace(/\s+ו-|\s+ו/g,', ').split(/\s*,\s*/).map(x=>x.trim()).filter(Boolean);
+  const two=n.split(/\s+ו-?\s*/);
+  if(two.length===2 && two[0].length>=2 && two[1].length>=2 && two[1].length<=28)
+    return two.map(x=>x.trim());
+  return [n];
+}
+function splitGuestNames(g){
+  const n=(g.name||'').trim();
+  const seats=Math.max(Number(g.adults)||1, 1);
+  const parts=parsePeople(n);
+  if(parts.length===seats) return parts;
+  if(parts.length>1){
+    const out=parts.slice(0,seats);
+    while(out.length<seats) out.push(n+' · '+(out.length+1));
+    return out;
+  }
+  if(seats===1) return [n];
+  return Array.from({length:seats},(_,i)=>n+' · '+(i+1));
+}
+function giftsOf(g){
+  const names=splitGuestNames(g);
+  const stored=g.gifts||[];
+  const n=Math.max(Number(g.adults)||1, stored.length, names.length);
+  const out=[];
+  for(let k=0;k<n;k++){
+    const name=names[k]||((g.name||'')+' · '+(k+1));
+    if(stored[k]){ out.push(Object.assign(emptyGift(name), stored[k], {who:stored[k].who||name})); continue; }
+    if(k===0 && g.gift && (g.gift.amount||g.gift.method||g.gift.received)){
+      out.push(Object.assign(emptyGift(name), {
+        amount:g.gift.amount, method:g.gift.method, received:!!g.gift.received,
+        date:g.gift.date||null, note:g.gift.note||null,
+      }));
+      continue;
+    }
+    out.push(emptyGift(name));
+  }
+  return out;
+}
+function giftTotal(g){ return giftsOf(g).reduce((a,x)=>a+(Number(x.amount)||0),0); }
+function giftIn(g){ return giftsOf(g).reduce((a,x)=>a+(x.received?(Number(x.amount)||0):0),0); }
+function syncGiftMirror(g){
+  const list=g.gifts&&g.gifts.length?g.gifts:giftsOf(g);
+  const sum=list.reduce((a,x)=>a+(Number(x.amount)||0),0);
+  const filled=list.filter(x=>Number(x.amount)>0);
+  const first=filled[0]||list[0]||{};
+  g.gift={
+    amount:sum||null, method:first.method||null,
+    received:filled.length?filled.every(x=>x.received):false,
+    date:first.date||null, note:first.note||null,
+  };
+}
+function writeGift(g,k,patch){
+  g.gifts=giftsOf(g).map((x,i)=>i===k?Object.assign({},x,patch):Object.assign({},x));
+  syncGiftMirror(g);
+}
+function waPhone(p){
+  const d=String(p||'').replace(/\D/g,'');
+  if(!d) return '';
+  if(d.startsWith('972')) return d;
+  if(d.startsWith('0')) return '972'+d.slice(1);
+  if(d.length===9) return '972'+d;
+  return d;
+}
+function waHref(phone,text){
+  const n=waPhone(phone); if(!n) return '';
+  return 'https://wa.me/'+n+'?text='+encodeURIComponent(text);
+}
+function rsvpText(g){
+  const n=NAMES(), m=Store.state.meta||{};
+  const who=(g.name||'').split(/\s+/)[0]||'';
+  const when=m.weddingDate?dmy(m.weddingDate):'';
+  return `היי ${who} 💛\nמזמינים אתכם לחתונה של ${n.groom} ו${n.bride}`+
+    (when?` ב־${when}`:'')+`.\nאפשר לאשר הגעה?\n`+
+    `${g.adults||0} מקומות אצלנו ברשימה`+(g.children?` + ${g.children} ילדים`:'')+'.';
+}
+
+/* ------------------------------------------------------------------- store */
+const Store={
+  state:null, _t:null,
+
+  boot(){
+    let raw=null;
+    try{ raw=localStorage.getItem(KEY); }catch(e){}
+    if(raw){
+      try{ this.state=JSON.parse(raw); }
+      catch(e){ console.error('corrupt state, falling back to seed',e); }
+    }
+    if(!this.state){
+      // No saved state and no data.js — the hosted build always starts here.
+      // Not an error: show the welcome screen and let them import a backup.
+      if(!window.SEED) return false;
+      this.state=structuredClone(window.SEED);
+      this.state.meta.seededAt=new Date().toISOString();
+    }
+    this.migrate();
+    return true;
+  },
+
+  // Fields the app owns but older seeds/exports may not carry.
+  migrate(){
+    const s=this.state;
+    s.meta=s.meta||{}; s.meta.schemaVersion=s.meta.schemaVersion||1;
+    (s.guests||[]).forEach(g=>{
+      g.gift=g.gift||{amount:null,method:null,received:false,date:null,note:null};
+      if(g.gift.amount===undefined) g.gift.amount=null;
+    });
+    (s.vendors||[]).forEach(v=>{
+      v.payments=v.payments||[]; v.coveredAmount=v.coveredAmount||0;
+      // A device that kept Supabase-era state re-uploaded the imported advances
+      // with different ids, doubling every one. The import created exactly one
+      // advance per vendor, so an exact twin of an imported payment is the bug.
+      const seen=new Set();
+      v.payments=v.payments.filter(p=>{
+        if(!p.note||!p.note.includes('יובא מהאקסל')) return true;
+        const k=[p.date,p.amount,p.method,p.note].join('|');
+        if(seen.has(k)) return false;
+        seen.add(k); return true;
+      });
+    });
+    (s.vendors||[]).forEach(v=>{
+      // Post-dated checks used to live in v.checks; they are simply payments
+      // that have not happened yet. Same id on every device keeps the merge calm.
+      if(v.checks&&v.checks.length){
+        v.checks.forEach(c=>{
+          if(v.payments.some(p=>p.id===c.id)) return;
+          v.payments.push({id:c.id,amount:c.amount,method:'check',date:c.dueDate||null,
+            note:c.name||null,payee:c.payee||null,planned:true,deposit:!!c.deposit});
+        });
+      }
+      delete v.checks;
+      if(v.payMethod===undefined) v.payMethod=null;
+      if(v.payDue===undefined) v.payDue=null;
+    });
+    (s.tasks||[]).forEach(t=>{ if(!t.status) t.status='open'; });
+    if(s.capital){
+      if(s.capital.prime==null) s.capital.prime=5.0;
+      if(s.capital.cpi==null)   s.capital.cpi=2.5;
+      ['roei','jordan'].forEach(k=>{
+        const d=s.capital[k]; if(!d) return;
+        d.income=d.income||{gross:null,net:null};
+        d.fixedExpenses=d.fixedExpenses||[];
+        d.fixedIncomes=d.fixedIncomes||[];
+      });
+      s.capital.slips=s.capital.slips||[];
+    }
+  },
+
+  update(fn){
+    const r=fn(this.state);
+    this.saveSoon();
+    if(typeof Sync!=='undefined') Sync.nudge();
+    render();
+    return r;
+  },
+
+  saveSoon(){ clearTimeout(this._t); this._t=setTimeout(()=>this.saveNow(),400); },
+
+  saveNow(){
+    try{ localStorage.setItem(KEY,JSON.stringify(this.state)); }
+    catch(e){
+      // Quota is the realistic failure here: drop backups before losing live data.
+      try{ localStorage.removeItem(BACKUP_KEY); localStorage.setItem(KEY,JSON.stringify(this.state)); toast('שים לב: הגיבויים נמחקו מחוסר מקום'); }
+      catch(e2){ toast('⚠ שמירה נכשלה — ייצא גיבוי עכשיו!'); }
+    }
+  },
+
+  backup(reason){
+    try{
+      const list=JSON.parse(localStorage.getItem(BACKUP_KEY)||'[]');
+      list.unshift({ts:new Date().toISOString(),reason,json:JSON.stringify(this.state)});
+      localStorage.setItem(BACKUP_KEY,JSON.stringify(list.slice(0,MAX_BACKUPS)));
+    }catch(e){ /* quota — backups are best-effort, live data comes first */ }
+  },
+
+  backups(){ try{ return JSON.parse(localStorage.getItem(BACKUP_KEY)||'[]'); }catch(e){ return []; } },
+
+  exportFile(){
+    const blob=new Blob([JSON.stringify(this.state,null,1)],{type:'application/json'});
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download=`ourmoney-${todayISO()}.json`;
+    a.click(); URL.revokeObjectURL(a.href);
+    toast('הגיבוי ירד');
+  },
+
+  importObj(obj){
+    if(!obj||!obj.meta||!obj.guests) throw new Error('קובץ לא תקין');
+    if(obj.meta.schemaVersion!==1) throw new Error('גרסת סכמה לא נתמכת: '+obj.meta.schemaVersion);
+    this.backup('לפני ייבוא');
+    this.state=obj; this.migrate(); this.saveNow(); render();
+    toast('הנתונים יובאו');
+  },
+};
+
+/* ------------------------------------------------------- safe path setter  */
+const ROOTS=new Set(['guests','vendors','income','forecast','tasks','quotes','contacts',
+                     'events','children','brideExpenses','capital','venue','meta']);
+function setPath(path,val){
+  const parts=String(path).split('.');
+  if(!ROOTS.has(parts[0])) throw new Error('bad path root: '+parts[0]);
+  let o=Store.state;
+  for(let i=0;i<parts.length-1;i++){
+    const k=parts[i];
+    o=Array.isArray(o)?o[Number(k)]:o[k];
+    if(o==null) throw new Error('bad path: '+path);
+  }
+  const last=parts[parts.length-1];
+  if(Array.isArray(o)) o[Number(last)]=val; else o[last]=val;
+}
+
+/* ------------------------------------------------------------------- calc  */
+const calc={
+  // Money that actually left: not planned, not a deposit held as security.
+  paidOf:v=>(v.payments||[]).reduce((s,p)=>s+((p.planned||p.deposit)?0:(Number(p.amount)||0)),0),
+  plannedOf:v=>(v.payments||[]).reduce((s,p)=>s+((p.planned&&!p.deposit)?(Number(p.amount)||0):0),0),
+  remainOf(v){ return (Number(v.total)||0)-this.paidOf(v)-(Number(v.coveredAmount)||0); },
+  // Remainder with no scheduled payment yet — needs a method and a date.
+  unscheduledOf(v){ return Math.max(0,this.remainOf(v)-this.plannedOf(v)); },
+
+  seatCost(g){
+    const V=Store.state.venue||{};
+    return (g.adults||0)*(Number(V.pricePerPlate)||0)+(g.children||0)*(Number(V.childPlate)||0);
+  },
+  giftNet(g){ return giftTotal(g)-this.seatCost(g); },
+
+  totals(){
+    const s=Store.state, guests=liveGuests();
+    const vendors=liveVendors();
+    const cost=vendors.reduce((a,v)=>a+(Number(v.total)||0),0);
+    const paid=vendors.reduce((a,v)=>a+this.paidOf(v),0);
+    const covered=vendors.reduce((a,v)=>a+(Number(v.coveredAmount)||0),0);
+    const remaining=cost-paid-covered;
+    const income=s.income.reduce((a,i)=>a+(Number(i.received)||0),0);
+    const expected=s.income.reduce((a,i)=>a+(Number(i.expected)||0),0);
+    const gifts=guests.reduce((a,g)=>a+giftTotal(g),0);
+    const giftsIn=guests.reduce((a,g)=>a+giftIn(g),0);
+    return {cost,paid,covered,remaining,income,expected,gifts,giftsIn,
+            balance:income+gifts-remaining-paid,
+            cash:income+giftsIn-paid};
+  },
+
+  headcount(){
+    const g=liveGuests(), seats=x=>(x.adults||0);
+    return {
+      rows:g.length,
+      invited:g.reduce((a,x)=>a+seats(x),0),
+      kids:g.reduce((a,x)=>a+(x.children||0),0),
+      confirmed:g.filter(x=>x.rsvp==='confirmed').reduce((a,x)=>a+seats(x),0),
+      declined:g.filter(x=>x.rsvp==='declined').reduce((a,x)=>a+seats(x),0),
+      pending:g.filter(x=>x.rsvp==='pending').reduce((a,x)=>a+seats(x),0),
+      sent:g.filter(x=>x.invitationSent).length,
+    };
+  },
+
+  daysLeft(){
+    const w=new Date(Store.state.meta.weddingDate+'T00:00:00');
+    const t=new Date(); t.setHours(0,0,0,0);
+    return Math.round((w-t)/864e5);
+  },
+};
+
+const CEREMONY_HM='19:30';
+function weddingAt(){
+  const iso=Store.state&&Store.state.meta&&Store.state.meta.weddingDate;
+  if(!iso) return null;
+  const w=new Date(`${iso}T${CEREMONY_HM}:00`);
+  return isNaN(w)?null:w;
+}
+function untilWedding(){
+  const w=weddingAt();
+  if(!w) return null;
+  const ms=w.getTime()-Date.now();
+  if(ms<=0) return {past:true,days:0,hours:0,minutes:0,seconds:0};
+  return {
+    past:false,
+    days:Math.floor(ms/864e5),
+    hours:Math.floor(ms%864e5/36e5),
+    minutes:Math.floor(ms%36e5/6e4),
+    seconds:Math.floor(ms%6e4/1e3),
+  };
+}
+function cdUnit(n, one, many){
+  return `<div class="unit"><div class="n" data-cdn>${n}</div><div class="k">${n===1?one:many}</div></div>`;
+}
+function dashCountdownHTML(){
+  const u=untilWedding();
+  if(!u||u.past) return '';
+  return `<div class="units" id="dashCd">
+    ${cdUnit(u.days,'יום','ימים')}
+    ${cdUnit(u.hours,'שעה','שעות')}
+    ${cdUnit(u.minutes,'דקה','דקות')}
+    ${cdUnit(u.seconds,'שנייה','שניות')}
+  </div>
+  <div class="l">לחתונה · מתחילה ב־${CEREMONY_HM} <span class="beat">💍</span></div>`;
+}
+let cdTimer=null;
+let refocus=null; // CSS selector to focus after the next render
+function stopCountdown(){ clearInterval(cdTimer); cdTimer=null; }
+function paintCountdown(){
+  const root=document.getElementById('dashCd');
+  const u=untilWedding();
+  if(!root||!u||u.past){
+    stopCountdown();
+    if(root&&u&&u.past) render();
+    return;
+  }
+  const nums=root.querySelectorAll('[data-cdn]');
+  const vals=[u.days,u.hours,u.minutes,u.seconds];
+  const labels=['יום|ימים','שעה|שעות','דקה|דקות','שנייה|שניות'];
+  nums.forEach((el,i)=>{
+    if(el.textContent!==String(vals[i])) el.textContent=vals[i];
+    const [one,many]=labels[i].split('|');
+    const k=el.parentElement.querySelector('.k');
+    const lab=vals[i]===1?one:many;
+    if(k&&k.textContent!==lab) k.textContent=lab;
+  });
+  const pill=document.getElementById('countdown');
+  if(pill){
+    const html=u.days>0
+      ? `<b>${u.days}</b> ימים<span class="cd-x"> · ${u.hours} שע׳</span>`
+      : `<b>${u.hours}</b> שע׳`;
+    if(pill.innerHTML!==html) pill.innerHTML=html;
+  }
+}
+
+/* ------------------------------------------------------------------ toast  */
+let toastT, undoFn=null;
+function toast(msg, act){
+  const el=document.getElementById('toast');
+  el.querySelector('span').textContent=msg;
+  const btn=document.getElementById('toastAct');
+  undoFn=act&&act.run||null;
+  if(btn){
+    btn.hidden=!undoFn;
+    btn.textContent=(act&&act.label)||'ביטול';
+  }
+  el.classList.add('on'); clearTimeout(toastT);
+  toastT=setTimeout(()=>{ el.classList.remove('on'); undoFn=null; }, act?8000:2200);
+}
+function toastUndo(msg, fn){ toast(msg,{label:'ביטול',run:fn}); }
+
+/* ============================================================ view registry */
+const ICONS={
+  dash:'<path d="M3 13h8V3H3zM13 21h8V11h-8zM13 7h8V3h-8zM3 21h8v-4H3z"/>',
+  budget:'<path d="M3 6h18v12H3z"/><circle cx="12" cy="12" r="2.5"/>',
+  guests:'<circle cx="9" cy="8" r="3.2"/><path d="M2.5 20a6.5 6.5 0 0113 0"/><path d="M16 5.5a3 3 0 010 5.6M17.5 20a6 6 0 00-2-4.3"/>',
+  gifts:'<path d="M3 11h18v9H3zM3 7h18v4H3zM12 7v13"/><path d="M12 7S9.5 3 7.5 4.2 9 7 12 7zM12 7s2.5-4 4.5-2.8S15 7 12 7z"/>',
+  tasks:'<path d="M4 6l2 2 3.5-3.5M4 13l2 2 3.5-3.5M4 20l2 2 3.5-3.5M13 6h7M13 14h7M13 21h7"/>',
+  more:'<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>',
+  capital:'<path d="M12 2v20M17 6.5c0-1.9-2.2-3-5-3s-5 1.1-5 3 2.2 2.8 5 3.3 5 1.4 5 3.4-2.2 3.3-5 3.3-5-1.4-5-3.3"/>',
+};
+// `short` keeps the mobile bar to one line per item; `label` is the desktop tab.
+const VIEWS=[
+  {id:'dash',    label:'לוח בקרה', short:'בקרה',  icon:'dash'},
+  {id:'budget',  label:'תקציב',    short:'תקציב', icon:'budget'},
+  {id:'guests',  label:'אורחים ומתנות', short:'אורחים',icon:'guests'},
+  {id:'capital', label:'הון ונדל״ן',short:'הון',   icon:'capital'},
+  {id:'more',    label:'עוד',      short:'עוד',   icon:'more'},
+];
+let active='dash';
+
+/* UI-only state (filters, search, what-if sliders) — deliberately not persisted. */
+const ui={
+  guestQ:'', guestSide:'', guestGroup:'', guestRsvp:'',
+  giftFilter:'', giftSort:'name', giftMore:new Set(), hall:false,
+  budgetView:'actual', taskFilter:'open',
+  // Mirrors capital.prime/cpi; the synced value wins on render (vCapital).
+  prime:5.0, cpi:2.5,
+  calc:{amount:200000,months:120,grace:20,ty:'sp',rt:'pp',spread:0},
+  // Pension forecast assumptions: annual return %, annual salary growth %, horizon (years).
+  fc:{ret:5.0,growth:3.0,years:30},
+};
+
+function setHall(on){
+  ui.hall=!!on;
+  try{ localStorage.setItem(HALL_KEY, ui.hall?'1':'0'); }catch(e){}
+  document.body.classList.toggle('hall', ui.hall);
+  if(ui.hall) active='guests';
+  render(); window.scrollTo(0,0);
+}
+
+function visibleViews(){
+  if(ui.hall) return VIEWS.filter(v=>v.id==='guests');
+  const d=Store.state?calc.daysLeft():1;
+  if(d<0){
+    const order=['dash','capital','guests','budget','more'];
+    return order.map(id=>VIEWS.find(v=>v.id===id)).filter(Boolean);
+  }
+  return VIEWS;
+}
+
+function nav(){
+  const views=visibleViews();
+  document.getElementById('tabs').innerHTML=views.map(v=>
+    `<button role="tab" data-v="${v.id}" aria-selected="${v.id===active}">${v.label}</button>`).join('');
+  document.getElementById('botnav').innerHTML=views.map(v=>
+    `<button role="tab" data-v="${v.id}" aria-selected="${v.id===active}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"
+           stroke-linecap="round" stroke-linejoin="round">${ICONS[v.icon]}</svg>${v.short}</button>`).join('');
+}
+
+/* Shown when there is no data at all: the hosted build on a fresh phone, or a
+   browser whose storage was cleared. The only way forward is an imported backup. */
+function vWelcome(){
+  return `<div class="card" style="max-width:520px;margin:2rem auto">
+    <div class="card-h"><span class="dot" style="background:var(--brand)"></span>
+      <h2>ברוכים הבאים</h2></div>
+    <p style="margin-bottom:.8rem">אין עדיין נתונים במכשיר הזה.</p>
+    <p class="note" style="margin-bottom:1rem">
+      במחשב פותחים את OurMoney, לוחצים על אייקון מסד הנתונים למעלה ואז
+      <b>ייצוא JSON</b>. שומרים את הקובץ ב־iCloud Drive, ומכאן מייבאים אותו.
+      הנתונים נשמרים רק בדפדפן הזה ולא נשלחים לשום מקום.
+    </p>
+    <button class="btn btn-p" style="width:100%" data-act="import">ייבוא קובץ JSON</button>
+    <p class="note" style="margin-top:.8rem">
+      אחרי הייבוא הכול נשמר אוטומטית — בפעם הבאה שתפתחו, הנתונים כבר יהיו כאן.
+    </p>
+  </div>`;
+}
+
+/* Who the couple are, the date and the venue live in the data, never in the code —
+   this repo is public, so nothing personal may be hardcoded here. */
+const NAMES=()=>{
+  const c=(Store.state&&Store.state.meta&&Store.state.meta.couple)||{};
+  return {bride:c.bride||'בת הזוג', groom:c.groom||'בן הזוג'};
+};
+const dmy=iso=>{ if(!iso) return ''; const [y,m,d]=iso.split('-'); return `${d}.${m}.${y}`; };
+
+/* Wide tables become stacked rows on the phone -- no sideways scrolling. */
+const MOBILE=()=>matchMedia('(max-width:680px)').matches;
+let _wasMob=MOBILE();
+addEventListener('resize',()=>{
+  // Only breakpoint crossings re-render: the iOS keyboard also fires resize,
+  // and re-rendering then would steal focus mid-typing.
+  if(MOBILE()!==_wasMob){ _wasMob=MOBILE(); render(); }
+});
+
+function render(){
+  stopCountdown();
+  if(!Store.state){
+    document.getElementById('tabs').innerHTML='';
+    document.getElementById('botnav').innerHTML='';
+    document.getElementById('countdown').textContent='';
+    document.getElementById('brandSub').textContent='';
+    document.getElementById('main').innerHTML=vWelcome();
+    return;
+  }
+  const views=visibleViews();
+  if(!views.some(v=>v.id===active)) active=views[0].id;
+  const m=Store.state.meta||{};
+  const n=NAMES();
+  document.getElementById('brandSub').textContent=
+    `${n.groom} & ${n.bride}${m.weddingDate?' · '+dmy(m.weddingDate):''}`;
+  document.title=`OurMoney — ${n.groom} & ${n.bride}`;
+  nav();
+  const d=calc.daysLeft();
+  const u=untilWedding();
+  document.getElementById('countdown').innerHTML =
+    u&&!u.past
+      ? (u.days>0
+          ? `<b>${u.days}</b> ימים<span class="cd-x"> · ${u.hours} שע׳</span>`
+          : `<b>${u.hours}</b> שע׳`)
+      : d===0?'<b>היום!</b> 🎉'
+      : d<0?`לפני <b>${-d}</b> ימים`
+      : `<b>${d}</b> ימים`;
+  document.getElementById('main').innerHTML=
+    `<section class="view on">${({dash:vDash,budget:vBudget,guests:vGuests,
+       tasks:vTasks,capital:vCapital,more:vMore})[active]()}</section>`;
+  if(active==='guests') filterGuestRows();
+  if(refocus){ const el=document.querySelector(refocus); refocus=null; if(el){ el.focus(); if(el.select) el.select(); } }
+  if(active==='dash' && u && !u.past){
+    paintCountdown();
+    cdTimer=setInterval(paintCountdown, 1000);
+  }
+}
+
+/* ==================================================================== DASH  */
+function householdMini(){
+  if(!Store.state.capital) return '';
+  const oR=personOutgoings('roei'), oJ=personOutgoings('jordan');
+  const iR=personIncome('roei'), iJ=personIncome('jordan');
+  const n=NAMES(), left=(i,o)=>i.total-o.total;
+  return `<div class="grid g3" style="margin-bottom:.85rem">
+    ${stat(`${n.groom} — נשאר בחודש`,moneyS(left(iR,oR)),
+       `נכנס ${money(iR.total)} · יוצא ${money(oR.total)}`,
+       left(iR,oR)>=0?'var(--good-2)':'var(--bad-2)')}
+    ${stat(`${n.bride} — נשאר בחודש`,moneyS(left(iJ,oJ)),
+       `נכנס ${money(iJ.total)} · יוצא ${money(oJ.total)}`,
+       left(iJ,oJ)>=0?'var(--good-2)':'var(--bad-2)')}
+    ${stat('ביחד — נשאר בחודש',moneyS(left(iR,oR)+left(iJ,oJ)),
+       `נכנס ${money(iR.total+iJ.total)} · יוצא ${money(oR.total+oJ.total)}`,'var(--brand-2)')}
+  </div>`;
+}
+const METHOD_HE={transfer:'העברה',cash:'מזומן',check:'צ׳ק',credit:'אשראי',bit:'ביט'};
+// Free-text methods from the import («העברה בנקאית- …») fold into the same buckets.
+const methodKey=m=>{ const x=String(m||'');
+  return /צ.?ק|check/i.test(x)?'check':/העבר|transfer/i.test(x)?'transfer':/מזומ|cash/i.test(x)?'cash'
+       :/אשראי|credit/i.test(x)?'credit':/ביט|bit/i.test(x)?'bit':''; };
+// \b does not know Hebrew letters, so test the separator explicitly.
+const isParent=g=>/^(אבא|אמא)(\s|$)/.test(String(g.name||'').trim());
+function moneySummary(){
+  const by={};
+  liveVendors().forEach(v=>(v.payments||[]).forEach(p=>{
+    if(p.planned||p.deposit) return;
+    const k=methodKey(p.method)||'other'; by[k]=(by[k]||0)+(Number(p.amount)||0);
+  }));
+  const byMethod=Object.entries(by).sort((a,b)=>b[1]-a[1])
+    .map(([k,v])=>`${k==='other'?'מקדמות בלי אמצעי רשום':METHOD_HE[k]} ${money(v)}`).join(' · ');
+  const parents=liveGuests().filter(isParent).reduce((a,g)=>a+giftIn(g),0);
+  const planned=liveVendors().reduce((a,v)=>a+calc.plannedOf(v),0);
+  const unplanned=liveVendors().reduce((a,v)=>a+calc.unscheduledOf(v),0);
+  return {byMethod,parents,planned,unplanned};
+}
+const methodHe=m=>m?(METHOD_HE[m]||m):'';
+/* Every shekel still owed, as a dated line: explicit planned payments (checks
+   handed over, transfers agreed) plus, per vendor, whatever remainder has no
+   line yet — that one carries the vendor's default method and due date. */
+function paymentPlan(){
+  const lines=[];
+  Store.state.vendors.forEach((v,vi)=>{
+    if(v._deleted) return;
+    (v.payments||[]).forEach((p,pi)=>{
+      if(p.planned) lines.push({v,vi,p,pi,kind:'planned',amount:Number(p.amount)||0,
+        date:p.date||null,method:p.method||null,deposit:!!p.deposit});
+    });
+    const rest=calc.unscheduledOf(v);
+    if(rest>0) lines.push({v,vi,kind:'rest',amount:rest,date:v.payDue||null,method:v.payMethod||null,deposit:false});
+  });
+  return lines.sort((a,b)=>(a.date||'9999').localeCompare(b.date||'9999'));
+}
+function planCard(edit,limit){
+  const all=paymentPlan();
+  if(!all.length) return edit?`<div class="card"><div class="card-h"><span class="dot" style="background:var(--good)"></span>
+    <h2>לוח תשלומים</h2></div><div class="empty">הכול שולם או מתוכנן — אין יתרות</div></div>`:'';
+  const today=todayISO();
+  const due=all.filter(x=>!x.deposit).reduce((a,x)=>a+x.amount,0);
+  const noDate=all.filter(x=>!x.deposit&&!x.date).length, noMethod=all.filter(x=>!x.deposit&&!x.method).length;
+  const tot=calc.totals(), after=tot.cash-due;
+  const list=limit?all.slice(0,limit):all;
+  const methodSel=(path,cur)=>`<select class="celltxt" data-path="${path}">
+      <option value="" ${!cur?'selected':''}>אמצעי?</option>
+      ${Object.entries(METHOD_HE).map(([k,l])=>`<option value="${k}" ${cur===k?'selected':''}>${l}</option>`).join('')}
+    </select>`;
+  const row=x=>{
+    const late=x.date&&x.date<today;
+    const when=x.date?dLabel(x.date):'מועד?';
+    return `<div class="row plan${late?' late':''}">
+      <div class="main">
+        <div class="name">${esc(x.v.name)}${x.deposit?' <span class="tag t-warn">פיקדון</span>':''}</div>
+        <div class="sub">${x.kind==='planned'?esc(x.p.note||'')+(x.p.payee?' · לפקודת '+esc(x.p.payee):''):'יתרה ללא תשלום מתוכנן'}</div>
+      </div>
+      ${edit&&x.kind==='rest'
+        ? methodSel(`vendors.${x.vi}.payMethod`,x.method)+
+          `<input type="date" class="celltxt" data-path="vendors.${x.vi}.payDue" value="${x.date||''}">`
+        : `<span class="tag ${x.method?'t-mute':'t-warn'}">${x.method?methodHe(x.method):'אמצעי?'}</span>
+           <span class="tag ${x.date?(late?'t-bad':'t-mute'):'t-warn'}">${when}</span>`}
+      <div class="val" style="color:${x.deposit?'var(--ink-3)':'var(--bad-2)'}">${money(x.amount)}</div>
+      ${edit&&x.kind==='planned'?`<button class="btn btn-o sm" data-markpaid="${x.vi}.${x.pi}" title="סימון כשולם">שולם ✓</button>
+        <button class="btn btn-d sm" data-delpay="${x.vi}.${x.pi}">✕</button>`:''}
+      ${edit&&x.kind==='rest'?`<button class="btn btn-o sm" data-pay="${x.vi}" title="פיצול לתשלום מתוכנן">+ פיצול</button>`:''}
+    </div>`;
+  };
+  return `<div class="card">
+    <div class="card-h"><span class="dot" style="background:${after>=0?'var(--good)':'var(--bad)'}"></span>
+      <h2>לוח תשלומים</h2>
+      <span class="sp note">${money(due)} מתוכנן${noDate?` · ${noDate} בלי מועד`:''}${noMethod?` · ${noMethod} בלי אמצעי`:''}</span></div>
+    ${list.map(row).join('')}
+    ${limit&&all.length>limit?`<button class="chip" data-v="budget" style="margin-top:.5rem">ועוד ${all.length-limit} — למסך התקציב</button>`:''}
+    <p class="note" style="margin-top:.6rem">מתנות שסומנו כהתקבלו ${money(tot.giftsIn)} פחות ${money(tot.paid)} ששולם = <b>${money(tot.cash)}</b> זמין לפי הרישום.
+      אחרי כל התשלומים: <b style="color:${after>=0?'var(--good-2)':'var(--bad-2)'}">${moneyS(after)}</b>.
+      זה לפי מה שרשום באפליקציה, לא לפי יתרת הבנק.</p>
+  </div>`;
+}
+
+function vDash(){
+  const t=calc.totals(), h=calc.headcount(), V=Store.state.venue||{};
+  const pctRsvp=h.invited?h.confirmed/h.invited*100:0;
+  const pctDecl=h.invited?h.declined/h.invited*100:0;
+  const giftRows=liveGuests().reduce((a,g)=>a+giftsOf(g).filter(x=>Number(x.amount)>0).length,0);
+
+
+  const d=calc.daysLeft(), m=Store.state.meta||{};
+  const married=d<0;
+  const u=untilWedding();
+  const hero = (u&&!u.past)
+    ? dashCountdownHTML()
+    : d===0
+    ? `<div class="n">היום!</div><div class="l">מזל טוב <span class="beat">🎉</span></div>`
+    : d<0
+    ? `<div class="l">נשואים כבר ${-d} ימים <span class="beat">💛</span></div>`
+    : `<div class="n">${d}</div><div class="l">ימים לחתונה <span class="beat">💍</span></div>`;
+
+  const hallCta=(d<=2&&d>=0)?`<button class="btn btn-p" style="width:100%;margin-bottom:.85rem" data-act="hall-on">מצב אולם — רישום מתנות מהיר</button>`:'';
+
+  const m$=moneySummary();
+  const weddingMoney=`
+  <div class="grid g3">
+    ${stat('סה״כ עלות החתונה',money(t.cost),
+       V.pricePerPlate&&V.minPlates?`${money(V.pricePerPlate)} × ${V.minPlates} מנות אולם = ${money(V.pricePerPlate*V.minPlates)}`:'','var(--ink)')}
+    ${stat('שילמנו עד כה',money(t.paid),m$.byMethod?'מזה: '+m$.byMethod:'עוד לא יצא כלום','var(--good-2)')}
+    ${stat('נשאר לשלם',money(t.remaining),
+       `${money(m$.planned)} מתוכנן${m$.unplanned?` · ${money(m$.unplanned)} בלי מועד`:''}`,'var(--bad-2)')}
+  </div>
+
+  <div class="grid g3">
+    ${stat('קיבלנו מההורים',money(m$.parents),
+       t.covered?`+ ${money(t.covered)} ששילמו ישירות לספקים`:'','var(--plum)')}
+    ${stat('קיבלנו סה״כ',money(t.giftsIn),
+       `${giftRows} מעטפות · ${money(t.giftsIn-m$.parents)} מאורחים${t.gifts>t.giftsIn?` · עוד ${money(t.gifts-t.giftsIn)} נרשמו וטרם התקבלו`:''}`,'var(--brand-2)')}
+    ${stat('נשאר בסוף',moneyS(t.giftsIn-t.paid-t.remaining),
+       `זמין עכשיו ${money(t.cash)} · אחרי כל התשלומים`,
+       t.giftsIn-t.paid-t.remaining>=0?'var(--good-2)':'var(--bad-2)')}
+  </div>`;
+
+  const marriedMoney=`
+  ${householdMini()}
+  <div class="grid g3" style="margin-bottom:.85rem">
+    ${stat('נשאר מחתונה',money(t.remaining),t.remaining?'ספקים שטרם נסגרו':'הכול שולם','var(--bad-2)')}
+    ${stat('מתנות שנרשמו',money(t.gifts),`${giftRows} מעטפות · ${money(t.giftsIn)} בידיים`,'var(--brand-2)')}
+    ${stat('מאזן חתונה',moneyS(t.balance),
+       t.balance>=0?'מכסה את מה שנשאר':'חסר מול הספקים',
+       t.balance>=0?'var(--good-2)':'var(--bad-2)')}
+  </div>`;
+
+  return `
+  <div class="hero">${hero}
+    <div class="d">${dmy(m.weddingDate)}${m.weddingDate?` · ${CEREMONY_HM}`:''}${m.venueName?' · '+esc(m.venueName):''}</div>
+  </div>
+  ${hallCta}
+  ${married?marriedMoney:weddingMoney}
+
+  ${planCard(false,6)}
+
+
+  ${d>=0?`<div class="card">
+    <div class="card-h"><span class="dot" style="background:var(--plum)"></span><h2>אישורי הגעה</h2>
+      <span class="sp note">${h.confirmed} מתוך ${h.invited} מוזמנים</span></div>
+    <div class="bar">
+      <i style="width:${pctRsvp}%;background:var(--good)"></i>
+      <i style="width:${pctDecl}%;background:var(--bad)"></i>
+    </div>
+    <div class="grid g4" style="margin-top:.7rem">
+      ${mini('מוזמנים',h.invited)}
+      ${mini('אישרו',h.confirmed,'var(--good-2)','confirmed')}
+      ${mini('לא מגיעים',h.declined,'var(--bad-2)','declined')}
+      ${mini('ממתינים',h.pending,'var(--warn-2)','pending')}
+    </div>
+    <p class="note" style="margin-top:.6rem">
+      ${h.rows} שורות הזמנה · ${h.kids} ילדים · הזמנות שנשלחו: ${h.sent}
+      ${V.minPlates?` · התחייבות לאולם: ${V.minPlates} מנות`:''}
+    </p>
+    <div class="chips" style="margin-top:.55rem">
+      <button class="chip" data-v="guests">לרשימת האורחים</button>
+      <button class="chip" data-act="export-rsvp">העתק רשימה לאולם</button>
+    </div>
+  </div>`:''}`;
+}
+const stat=(k,v,s,c)=>`<div class="stat" style="--c:${c||'var(--brand)'}">
+  <div class="k">${k}</div><div class="v">${v}</div>${s?`<div class="s">${esc(s)}</div>`:''}</div>`;
+const guestStat=(k,v,s,c,filter)=>{
+  const on=filter===''?!ui.guestRsvp:ui.guestRsvp===filter;
+  return `<button type="button" class="stat" data-grsvpgo="${filter}" aria-pressed="${on}" style="--c:${c||'var(--brand)'}">
+    <div class="k">${k}</div><div class="v">${v}</div>${s?`<div class="s">${esc(s)}</div>`:''}</button>`;
+};
+const mini=(k,v,c,go)=>{
+  const inner=`<div class="note">${k}</div>
+    <div style="font-size:1.1rem;font-weight:800;color:${c||'var(--ink)'};font-variant-numeric:tabular-nums">${nf.format(v)}</div>`;
+  if(go==null) return `<div>${inner}</div>`;
+  return `<button type="button" data-v="guests" data-grsvpgo="${go}" style="background:none;border:none;padding:0;text-align:start;color:inherit;cursor:pointer">${inner}</button>`;
+};
+
+/* ================================================================== BUDGET  */
+function vBudget(){
+  const t=calc.totals();
+  ui.budgetView='actual';
+  return budgetActual(t);
+}
+
+function budgetActual(t){
+  const stOf=(v,paid,rem)=> v.total==null ? '<span class="tag t-mute">אין מחיר</span>'
+             : rem<=0 && v.coveredAmount ? '<span class="tag t-brand">מכוסה</span>'
+             : rem<=0 ? '<span class="tag t-good">שולם</span>'
+             : calc.unscheduledOf(v)<=0 ? '<span class="tag t-warn">מתוכנן</span>'
+             : paid>0 ? '<span class="tag t-warn">מקדמה</span>'
+             : '<span class="tag t-bad">פתוח</span>';
+  const payLine=(p,vi,pi)=>`<div class="row" style="padding-block:.4rem">
+      <div class="main"><div class="sub">${p.date?dLabel(p.date):'ללא תאריך'}${p.method?' · '+esc(methodHe(p.method)):''}${p.note?' · '+esc(p.note):''}
+        ${p.planned?' <span class="tag t-warn">מתוכנן</span>':''}${p.deposit?' <span class="tag t-warn">פיקדון</span>':''}</div></div>
+      <div class="val" style="color:${p.planned?'var(--warn-2)':'var(--good-2)'}">${money(p.amount)}</div>
+      <button class="btn btn-d sm" data-delpay="${vi}.${pi}">✕</button>
+    </div>`;
+  const rows=Store.state.vendors.map((v,i)=>{
+    if(v._deleted) return '';
+    const paid=calc.paidOf(v), rem=calc.remainOf(v), st=stOf(v,paid,rem);
+    const pays=(v.payments||[]);
+    return `<div class="grow">
+      <div style="display:flex;gap:.5rem;align-items:baseline;flex-wrap:wrap">
+        <b>${esc(v.name)}</b>${st}
+        ${v.coveredAmount?`<span class="tag t-brand">${money(v.coveredAmount)} · ${esc(v.coveredBy||'')}</span>`:''}
+        ${v.dueWhen?`<span class="sp note" style="margin-inline-start:auto">${esc(v.dueWhen)}</span>`:''}
+      </div>
+      ${v.notes?`<div class="sub note" style="margin-top:.3rem">${noteLines(v.notes)}</div>`:''}
+      <div style="display:flex;gap:.55rem;align-items:center;margin-top:.45rem;flex-wrap:wrap">
+        <label class="note" style="display:flex;align-items:center;gap:.3rem">עלות
+          <input type="number" class="cellnum inln" data-path="vendors.${i}.total"
+            value="${v.total??''}" style="width:92px" inputmode="numeric"></label>
+        <span class="note">שולם <b style="color:var(--good-2)">${money(paid)}</b></span>
+        <span class="note">נשאר <b style="color:${rem>0?'var(--bad-2)':'var(--ink-3)'}">${money(rem)}</b></span>
+        <button class="btn btn-o sm" data-pay="${i}" style="margin-inline-start:auto">+ תשלום</button>
+      </div>
+      ${pays.length?`<details class="acc"><summary>תשלומים (${pays.length})</summary><div>
+        ${pays.map((p,pi)=>payLine(p,i,pi)).join('')}</div></details>`:''}
+    </div>`;
+  }).join('');
+
+  return `
+  <div class="grid g4" style="margin-bottom:.85rem">
+    ${stat('עלות',money(t.cost),'','var(--ink)')}
+    ${stat('שולם',money(t.paid),'','var(--good-2)')}
+    ${stat('מכוסה',money(t.covered),liveVendors().filter(v=>v.coveredAmount).map(v=>v.name.split(' ')[0]).join(' · '),'var(--plum)')}
+    ${stat('נשאר',money(t.remaining),'עלות − שולם − מכוסה','var(--bad-2)')}
+  </div>
+
+  ${planCard(true)}
+
+  <div class="card">
+    <div class="card-h"><span class="dot" style="background:var(--brand)"></span><h2>ספקים והוצאות</h2>
+      <button class="chip" data-act="vendor-new" style="margin-inline-start:auto;background:var(--brand);border-color:var(--brand);color:var(--on-brand)">+ הוצאה חדשה</button></div>
+    <p class="note" style="margin:-.3rem 0 .6rem">לחצו על סכום כדי לערוך · «+ תשלום» רושם תשלום שבוצע או מתוכנן</p>
+    ${rows}
+  </div>`;
+}
+
+/* ================================================================== GUESTS  */
+function guestGroups(){
+  return [...new Set(liveGuests().map(g=>g.group).filter(Boolean))].sort();
+}
+function filteredGuests(q,side,group,rsvp){
+  const term=q.trim().toLowerCase();
+  return liveGuests().filter(g=>{
+    if(side && g.side!==side && g.list!==side) return false;
+    if(group && g.group!==group) return false;
+    if(rsvp && g.rsvp!==rsvp) return false;
+    if(!term) return true;
+    return (g.name||'').toLowerCase().includes(term)
+        || (g.phone||'').includes(term)
+        || (g.group||'').toLowerCase().includes(term)
+        || giftsOf(g).some(x=>(x.who||'').toLowerCase().includes(term));
+  });
+}
+const WA_ICON='<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 19l-3 2 1-4A9 9 0 1112 21a9 9 0 01-4.2-1.05z"/></svg>';
+
+/* Gift figures for the whole list. The parents' contributions are kept apart:
+   with 173,000 from two rows they would swamp any per-guest average. */
+function giftStats(){
+  const G=liveGuests(), V=Store.state.venue||{}, plate=Number(V.pricePerPlate)||0;
+  const guests=G.filter(g=>!isParent(g));
+  const gave=guests.filter(g=>giftTotal(g)>0);
+  const total=gave.reduce((a,g)=>a+giftTotal(g),0);
+  const envelopes=gave.reduce((a,g)=>a+giftsOf(g).filter(x=>Number(x.amount)>0).length,0);
+  // Someone who did not come but sent a gift costs no plate (their row shows
+  // pure net) and is listed apart -- yet they count in the per-guest average.
+  const absent=gave.filter(g=>g.rsvp==='declined');
+  const absentTotal=absent.reduce((a,g)=>a+giftTotal(g),0);
+  const gaveSeats=gave.reduce((a,g)=>a+(g.adults||0),0);
+  const confirmed=guests.filter(g=>g.rsvp==='confirmed');
+  const confirmedSeats=confirmed.reduce((a,g)=>a+(g.adults||0),0);
+  // Coverage is counted in seats, not envelopes: one envelope from a row of
+  // three covers three guests.
+  const coveredRows=confirmed.filter(g=>giftTotal(g)>0);
+  const coveredSeats=coveredRows.reduce((a,g)=>a+(g.adults||0),0);
+  const notYetRows=confirmed.filter(g=>!(giftTotal(g)>0));
+  const notYet=notYetRows.length;
+  const notYetSeats=notYetRows.reduce((a,g)=>a+(g.adults||0),0);
+  const parents=G.filter(isParent).reduce((a,g)=>a+giftTotal(g),0);
+  return {total,parents,envelopes,rows:gave.length,gaveSeats,confirmedSeats,notYet,plate,
+    absent:absent.length,absentTotal,absentRows:absent,coveredSeats,coveredRows:coveredRows.length,notYetSeats,
+    perSeat:gaveSeats?total/gaveSeats:0, perConfirmed:confirmedSeats?total/confirmedSeats:0};
+}
+/* Typing in the search box hides and shows the rows that are already on the
+   page instead of rebuilding the whole screen -- the rebuild is what made the
+   list stutter on a phone. Everything else (chips, sort) still re-renders. */
+function filterGuestRows(){
+  const term=ui.guestQ.trim().toLowerCase();
+  const need=ui.hall&&term.length<2;
+  let n=0,seats=0;
+  document.querySelectorAll('#guestList .grow[data-s]').forEach(r=>{
+    const on=!need&&(!term||r.dataset.s.includes(term));
+    r.hidden=!on; if(on){ n++; seats+=Number(r.dataset.seats)||0; }
+  });
+  const c=document.getElementById('guestCount');
+  if(c) c.textContent=need?'הקלידו שם':`${n} שורות · ${seats} אנשים`;
+  const e=document.getElementById('guestEmpty');
+  if(e){
+    e.hidden=n>0;
+    e.textContent=need?`הקלידו לפחות שתי אותיות — באולם אין זמן לגלול ${nf.format(calc.headcount().invited)} שורות`
+      :term?'לא נמצאו אורחים':(e.dataset.msg||'לא נמצאו אורחים');
+  }
+}
+function vGuests(){
+  const h=calc.headcount(), t=calc.totals(), gs=giftStats();
+  const W=rsvpWords();
+  let list=filteredGuests('',ui.guestSide,ui.guestGroup,ui.guestRsvp);
+  if(ui.giftFilter==='gave')    list=list.filter(g=>giftTotal(g)>0);
+  if(ui.giftFilter==='notyet')  list=list.filter(g=>!(giftTotal(g)>0));
+  if(ui.giftFilter==='pending') list=list.filter(g=>giftsOf(g).some(x=>Number(x.amount)>0&&!x.received));
+  if(ui.giftFilter==='absentgave') list=list.filter(g=>g.rsvp==='declined'&&giftTotal(g)>0);
+  list=[...list].sort((a,b)=>{
+    if(ui.giftSort==='amount'){ const d=giftTotal(b)-giftTotal(a); if(d) return d; }
+    if(ui.giftSort==='net'){ const d=calc.giftNet(b)-calc.giftNet(a); if(d) return d; }
+    return (a.name||'').localeCompare(b.name||'','he');
+  });
+  const shown=list.reduce((a,g)=>a+(g.adults||0),0);
+
+  const vsvg='<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"/></svg>';
+  const xsvg='<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+  const rsvpBtns=(i,g)=>`<div class="rsvp-pair">
+        <button class="check" data-rsvpset="confirmed" data-gi="${i}" aria-pressed="${g.rsvp==='confirmed'}" title="${W.yes1}" aria-label="${W.yes1}">${vsvg}</button>
+        <button class="check no" data-rsvpset="declined" data-gi="${i}" aria-pressed="${g.rsvp==='declined'}" title="${W.no1}" aria-label="${W.no1}">${xsvg}</button>
+      </div>`;
+  const sideTag=g=>`<span class="tag ${g.list==='חברים'?'t-brand':g.side==='כלה'?'t-warn':'t-good'}">${esc(g.side||g.list)}</span>`;
+  // A seat that only has a generated name («… · 2») is just another envelope.
+  const slotLabel=(g,slot,k)=>{
+    if(k===0) return 'מתנה';
+    const who=slot.who||'';
+    return (who&&who!==g.name&&!/ · \d+$/.test(who))?who:`מעטפה ${k+1}`;
+  };
+  const slotRow=(i,g,slot,k)=>`<div class="gift-row${slot.received?' done':''}">
+      <div class="who"><div class="name">${esc(slotLabel(g,slot,k))}</div></div>
+      <div class="amt"><input type="number" inputmode="numeric" placeholder="₪"
+        class="giftamt" data-gi="${i}" data-gk="${k}" value="${slot.amount??''}"></div>
+      <div class="meta">
+        <select data-gm="${i}" data-gk="${k}">
+          <option value="" ${!slot.method?'selected':''}>אמצעי</option>
+          <option value="cash"     ${slot.method==='cash'?'selected':''}>מזומן</option>
+          <option value="check"    ${slot.method==='check'?'selected':''}>צ׳ק</option>
+          <option value="bit"      ${slot.method==='bit'?'selected':''}>ביט</option>
+          <option value="transfer" ${slot.method==='transfer'?'selected':''}>העברה</option>
+        </select>
+        <button class="check" data-gr="${i}" data-gk="${k}" aria-pressed="${!!slot.received}" title="התקבל">${vsvg}</button>
+      </div>
+    </div>`;
+
+  const rows=list.map(g=>{
+    const i=Store.state.guests.indexOf(g);
+    const slots=giftsOf(g);
+    // One envelope per household by default; more only when there is money
+    // on them or the row was opened up. Halves the DOM on a 350-row list.
+    const open=ui.giftMore.has(g.id);
+    const shownSlots=slots.map((slot,k)=>(k===0||open||Number(slot.amount)>0||slot.received)?slotRow(i,g,slot,k):'').join('');
+    const hiddenN=slots.filter((slot,k)=>!(k===0||open||Number(slot.amount)>0||slot.received)).length;
+    const total=giftTotal(g), seatCost=calc.seatCost(g), net=total-seatCost;
+    const search=[g.name,g.group,g.phone,...slots.map(x=>x.who)].filter(Boolean).join(' ').toLowerCase();
+    return `<div class="grow" data-s="${esc(search)}" data-seats="${g.adults||0}">
+      <div style="display:flex;align-items:center;gap:.5rem">
+        <div style="flex:1;min-width:0">
+          <div class="name" style="font-weight:600">${esc(g.name)}
+            <span class="note">· ${g.adults||0}${g.children?` +${g.children}👶`:''}</span></div>
+          <div class="sub note">${esc(g.group||'—')}${g.phone?` · <span dir="ltr">${esc(g.phone)}</span>`:''}</div>
+          ${g.notes&&!ui.hall?`<div class="sub note" style="color:var(--warn-2)">${esc(g.notes)}</div>`:''}
+        </div>
+        ${ui.hall?'':sideTag(g)}
+        ${rsvpBtns(i,g)}
+        ${ui.hall?'':`<button class="btn btn-o sm" data-gedit="${i}" title="עריכת אורח" aria-label="עריכת אורח">עריכה</button>`}
+      </div>
+      ${total>0&&!ui.hall?(g.rsvp==='declined'
+        ?`<div class="gsum"><span>מתנה <b>${money(total)}</b></span>
+           <span class="tag t-brand">${W.no1} · שלח/ה מתנה</span>
+           <span style="color:var(--good-2)">בלי עלות מנה · נטו <b>${money(total)}</b></span></div>`
+        :`<div class="gsum">
+        <span>מתנה <b>${money(total)}</b></span>
+        <span>${g.adults||0} מנות = ${money(seatCost)}</span>
+        <span style="color:${net>=0?'var(--good-2)':'var(--bad-2)'}">נטו <b>${moneyS(net)}</b></span>
+        ${(g.adults||0)>1?`<span>${money(total/(g.adults||1))} לאורח</span>`:''}
+      </div>`):''}
+      <div class="gslots">${shownSlots}
+        ${hiddenN?`<button class="chip sm" data-gmore="${esc(g.id)}" style="margin-top:.3rem">+ מעטפה נוספת (${hiddenN})</button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+
+  const emptyMsg=ui.giftFilter==='gave'?'אף אחד בסינון הזה עוד לא הביא מתנה'
+    :ui.giftFilter==='notyet'?'כולם כאן כבר הביאו'
+    :ui.giftFilter==='pending'?'אין מתנות שנרשמו וטרם התקבלו'
+    :ui.giftFilter==='absentgave'?'אין מי שלא הגיע ושלח מתנה'
+    :ui.guestRsvp==='declined'?'אין אורחים שמסומנים כלא מגיעים'
+    :ui.guestRsvp==='confirmed'?'אין אורחים שאישרו הגעה'
+    :ui.guestRsvp==='pending'?'אין אורחים ממתינים'
+    :'לא נמצאו אורחים';
+
+  const hallbar=ui.hall?`<div class="hallbar">
+    מצב אולם · חיפוש, סכום, אמצעי, וי
+    <button class="btn sm" style="margin-inline-start:auto;background:#fff;color:var(--brand);min-height:32px" data-act="hall-off">יציאה</button>
+  </div>`:'';
+  const netSeat=gs.perSeat-gs.plate;
+
+  return `
+  ${hallbar}
+  ${ui.hall?'':`<div class="grid g4" style="margin-bottom:.7rem">
+    ${guestStat('מוזמנים',nf.format(h.invited),`${h.rows} שורות · ${h.kids} ילדים`,'var(--ink)','')}
+    ${guestStat(W.yes,nf.format(h.confirmed),'','var(--good-2)','confirmed')}
+    ${guestStat(W.no,nf.format(h.declined),'','var(--bad-2)','declined')}
+    ${guestStat(W.pend,nf.format(h.pending),'','var(--warn-2)','pending')}
+  </div>
+  <div class="grid g3" style="margin-bottom:.85rem">
+    ${stat('מתנות מאורחים',money(gs.total),
+       `${gs.rows} משפחות · ${gs.envelopes} מעטפות${gs.absent?` · ${gs.absent} ${W.no} ושלחו ${money(gs.absentTotal)}`:''}${gs.parents?` · ההורים ${money(gs.parents)} בנפרד`:''}`,'var(--brand-2)')}
+    ${stat('ממוצע לאורח שנתן',money(gs.perSeat),
+       gs.gaveSeats?`${gs.gaveSeats} אורחים · מול מנה ${money(gs.plate)} → ${moneyS(netSeat)} לאורח`:'עוד אין מתנות מאורחים',
+       gs.gaveSeats?(netSeat>=0?'var(--good-2)':'var(--bad-2)'):'var(--ink-3)')}
+    <button type="button" class="stat" data-gfilter="notyet" aria-pressed="${ui.giftFilter==='notyet'}" style="--c:var(--plum)">
+      <div class="k">הביאו מתנה — מתוך מי ש${W.who}</div>
+      <div class="v">${nf.format(gs.coveredSeats)} <span style="font-size:.9rem;font-weight:600;color:var(--ink-3)">מתוך ${nf.format(gs.confirmedSeats)}</span></div>
+      <div class="s">${esc(`${gs.coveredRows} משפחות הביאו · נשארו ${nf.format(gs.notYetSeats)} אורחים ב־${gs.notYet} משפחות · לחיצה מסננת`)}</div>
+    </button>
+  </div>`}
+
+  ${!ui.hall&&gs.absent?`<div class="card">
+    <div class="card-h"><span class="dot" style="background:var(--plum)"></span>
+      <h2>${W.no} ושלחו מתנה</h2>
+      <span class="sp note">${gs.absent} משפחות · ${money(gs.absentTotal)}</span></div>
+    ${[...gs.absentRows].sort((a,b)=>giftTotal(b)-giftTotal(a)).map(g=>`<div class="row">
+      <div class="main"><div class="name">${esc(g.name)}</div>
+        <div class="sub">${esc(g.group||'')}${giftsOf(g).filter(x=>Number(x.amount)>0).map(x=>methodHe(x.method)).filter(Boolean).length?' · '+esc([...new Set(giftsOf(g).filter(x=>Number(x.amount)>0).map(x=>methodHe(x.method)).filter(Boolean))].join(', ')):''}</div></div>
+      <div class="val" style="color:var(--good-2)">${money(giftTotal(g))}</div>
+    </div>`).join('')}
+    <p class="note" style="margin-top:.5rem">בלי עלות מנה — כל הסכום נטו. נספרים בממוצע לאורח שנתן, לא בכיסוי של מי ש${W.who}.</p>
+  </div>`:''}
+
+  <div class="card">
+    <div class="search" style="margin-bottom:.6rem">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      <input type="search" id="guestQ" placeholder="${ui.hall?'שם האורח — לפחות שתי אותיות…':'חיפוש שם, טלפון או קבוצה…'}" value="${esc(ui.guestQ)}" autocomplete="off">
+    </div>
+    ${ui.hall?'':`<div class="chips" style="margin-bottom:.45rem">
+      <button class="chip" data-gside="" aria-pressed="${!ui.guestSide}">הכל</button>
+      <button class="chip" data-gside="כלה" aria-pressed="${ui.guestSide==='כלה'}">צד כלה</button>
+      <button class="chip" data-gside="חתן" aria-pressed="${ui.guestSide==='חתן'}">צד חתן</button>
+      <button class="chip" data-gside="חברים" aria-pressed="${ui.guestSide==='חברים'}">חברים</button>
+      <button class="chip" data-grsvp="confirmed" aria-pressed="${ui.guestRsvp==='confirmed'}">${W.yes}</button>
+      <button class="chip" data-grsvp="declined" aria-pressed="${ui.guestRsvp==='declined'}">${W.no}</button>
+      <button class="chip" data-grsvp="pending" aria-pressed="${ui.guestRsvp==='pending'}">${W.pend}</button>
+    </div>
+    <div class="chips" style="margin-bottom:.45rem">
+      <button class="chip" data-gfilter="gave" aria-pressed="${ui.giftFilter==='gave'}">הביאו מתנה</button>
+      <button class="chip" data-gfilter="notyet" aria-pressed="${ui.giftFilter==='notyet'}">עוד לא הביאו</button>
+      <button class="chip" data-gfilter="pending" aria-pressed="${ui.giftFilter==='pending'}">נרשם וטרם התקבל</button>
+      <button class="chip" data-gfilter="absentgave" aria-pressed="${ui.giftFilter==='absentgave'}">${W.no} ושלחו מתנה${gs.absent?` (${gs.absent})`:''}</button>
+      <span class="note" style="align-self:center;margin-inline-start:.3rem">מיון:</span>
+      <button class="chip" data-gsort="name" aria-pressed="${ui.giftSort==='name'}">שם</button>
+      <button class="chip" data-gsort="amount" aria-pressed="${ui.giftSort==='amount'}">סכום ↓</button>
+      <button class="chip" data-gsort="net" aria-pressed="${ui.giftSort==='net'}">נטו מול מנה ↓</button>
+    </div>
+    <div class="chips" style="margin-bottom:.5rem">
+      <button class="chip" data-act="guest-new"
+        style="background:var(--brand);border-color:var(--brand);color:var(--on-brand)">+ אורח</button>
+      <button class="chip" data-act="export-rsvp">העתק לאולם</button>
+      <button class="chip" data-act="export-xlsx">אקסל</button>
+      <button class="chip" data-act="export-pdf">PDF</button>
+      <button class="chip" data-act="hall-on">מצב אולם</button>
+    </div>
+    <select id="guestGroup" style="max-width:280px">
+      <option value="">כל הקבוצות</option>
+      ${guestGroups().map(x=>`<option ${ui.guestGroup===x?'selected':''}>${esc(x)}</option>`).join('')}
+    </select>`}
+  </div>
+
+  <div class="card" id="guestList">
+    <div class="card-h"><span class="dot" style="background:var(--brand)"></span><h2>אורחים ומתנות</h2>
+      <span class="sp note" id="guestCount">${list.length} שורות · ${shown} אנשים</span></div>
+    ${rows}
+    <div class="empty" id="guestEmpty" data-msg="${esc(emptyMsg)}" ${rows?'hidden':''}>${emptyMsg}</div>
+  </div>
+
+  <div class="stickybar">
+    <div>נרשם<b>${money(t.gifts)}</b></div>
+    <div>התקבל<b style="color:var(--good-2)">${money(t.giftsIn)}</b></div>
+    <div>נשאר לשלם<b style="color:var(--bad-2)">${money(t.remaining)}</b></div>
+    <div>מאזן<b style="color:${t.balance>=0?'var(--good-2)':'var(--bad-2)'}">${moneyS(t.balance)}</b></div>
+  </div>`;
+}
+
+/* =================================================================== TASKS  */
+function vTasks(){
+  const all=Store.state.tasks||[];
+  const today=todayISO();
+  let list=all;
+  if(ui.taskFilter==='open') list=all.filter(t=>t.status!=='done');
+  if(ui.taskFilter==='done') list=all.filter(t=>t.status==='done');
+  if(ui.taskFilter==='soon') list=all.filter(t=>t.status!=='done'&&t.dueDate&&t.dueDate<=addDays(today,14));
+  if(ui.taskFilter==='late') list=all.filter(t=>t.status!=='done'&&t.dueDate&&t.dueDate<today);
+
+  const byTopic={};
+  list.forEach(t=>{ (byTopic[t.topic||'כללי'] ||= []).push(t); });
+  Object.values(byTopic).forEach(a=>a.sort((x,y)=>(x.dueDate||'9999').localeCompare(y.dueDate||'9999')));
+
+  const open=all.filter(t=>t.status!=='done').length;
+  const overdue=all.filter(t=>t.status!=='done'&&t.dueDate&&t.dueDate<today).length;
+
+  return `
+  <div class="grid g4" style="margin-bottom:.85rem">
+    ${stat('סה״כ משימות',all.length,'','var(--ink)')}
+    ${stat('פתוחות',open,'','var(--warn-2)')}
+    ${stat('הושלמו',all.length-open,'','var(--good-2)')}
+    ${stat('באיחור',overdue,'עבר תאריך היעד','var(--bad-2)')}
+  </div>
+  <div class="card">
+    <div class="chips">
+      <button class="chip" data-tf="open" aria-pressed="${ui.taskFilter==='open'}">פתוחות</button>
+      <button class="chip" data-tf="soon" aria-pressed="${ui.taskFilter==='soon'}">14 הימים הקרובים</button>
+      <button class="chip" data-tf="late" aria-pressed="${ui.taskFilter==='late'}">באיחור</button>
+      <button class="chip" data-tf="done" aria-pressed="${ui.taskFilter==='done'}">הושלמו</button>
+      <button class="chip" data-tf="all"  aria-pressed="${ui.taskFilter==='all'}">הכל</button>
+      <button class="chip" data-act="task-new"
+        style="background:var(--brand);border-color:var(--brand);color:var(--on-brand)">+ משימה חדשה</button>
+    </div>
+    <p class="note" style="margin-top:.6rem">
+      תאריכי היעד מחושבים מתאריך החתונה (${Store.state.meta.weddingDate}) פחות «כמה ימים לפני האירוע»,
+      כי התאריכים המקוריים בגיליון «תכנון» היו של תבנית משנת 2018.
+    </p>
+  </div>
+  ${Object.keys(byTopic).length?Object.entries(byTopic).map(([topic,items])=>`
+    <div class="card">
+      <div class="card-h"><span class="dot" style="background:var(--brand)"></span><h2>${esc(topic)}</h2>
+        <span class="sp note">${items.length}</span></div>
+      ${items.map(t=>{
+        const idx=all.indexOf(t);
+        const late=t.status!=='done'&&t.dueDate&&t.dueDate<today;
+        return `<div class="row">
+          <button class="check" data-td="${idx}" aria-pressed="${t.status==='done'}">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"/></svg></button>
+          <div class="main">
+            <div class="name" style="${t.status==='done'?'text-decoration:line-through;color:var(--ink-3)':''}">${esc(t.title)}</div>
+            <div class="sub">${t.owner?esc(t.owner)+' · ':''}${esc(t.source)}${t.notes?' · '+esc(t.notes):''}</div>
+          </div>
+          ${t.dueDate?`<span class="tag ${late?'t-bad':'t-mute'}">${dLabel(t.dueDate)}</span>`:''}
+        </div>`;}).join('')}
+    </div>`).join(''):'<div class="card"><div class="empty">אין משימות בקטגוריה הזו</div></div>'}`;
+}
+
+/* ==================================================================== MORE  */
+function vMore(){
+  const s=Store.state;
+  const ev=(s.events||[])[0];
+  return `
+  <div class="card">
+    <div class="card-h"><span class="dot" style="background:var(--warn)"></span><h2>השוואת הצעות מחיר</h2></div>
+    ${(s.quotes||[]).map(q=>`<div style="padding:.6rem 0;border-bottom:1px solid var(--line)">
+      <div style="display:flex;gap:.5rem;align-items:baseline">
+        <b>${esc(q.name)}</b><span class="tag t-mute">${esc(q.category||'')}</span>
+        <span class="sp" style="margin-inline-start:auto;font-weight:700">${q.cost!=null?money(q.cost):esc(q.costText||'—')}</span>
+      </div>
+      ${q.advance?`<div class="note">מקדמה: ${money(q.advance)}</div>`:''}
+      ${q.pros?`<div class="note" style="color:var(--good-2)">✓ ${esc(q.pros)}</div>`:''}
+      ${q.cons?`<div class="note" style="color:var(--bad-2)">✗ ${esc(q.cons)}</div>`:''}
+    </div>`).join('')||'<div class="empty">אין הצעות</div>'}
+  </div>
+
+  ${ev?`<div class="card">
+    <div class="card-h"><span class="dot" style="background:var(--plum)"></span><h2>${esc(ev.name)} · ${dLabel(ev.date)}</h2>
+      <span class="sp note">${ev.attendees.length} מוזמנות</span></div>
+    ${(ev.tasks||[]).map(t=>`<div class="row"><div class="main"><div class="name">${esc(t.title)}</div></div>
+      <span class="tag ${t.done?'t-good':'t-mute'}">${t.done?'בוצע':'פתוח'}</span></div>`).join('')}
+    <details class="acc"><summary>רשימת המוזמנות (${ev.attendees.length})</summary><div>
+      ${ev.attendees.map(a=>`<div class="row"><div class="main"><div class="name">${esc(a.name)}</div>
+        <div class="sub">${esc(a.relation||'')}</div></div>
+        ${a.confirmed?'<span class="tag t-good">אישרה</span>':''}</div>`).join('')}
+    </div></details>
+  </div>`:''}
+
+  <div class="card">
+    <div class="card-h"><span class="dot" style="background:var(--good)"></span><h2>אנשי קשר — ספקים</h2></div>
+    ${(s.contacts||[]).map(c=>`<div class="row">
+      <div class="main"><div class="name">${esc(c.role)}</div>
+        <div class="sub">${esc(c.name||'טרם נקבע')}</div></div>
+      ${c.phone?`<a class="val" dir="ltr" href="tel:${esc(c.phone)}">${esc(c.phone)}</a>`:'<span class="note">—</span>'}
+    </div>`).join('')||'<div class="empty">אין אנשי קשר</div>'}
+  </div>
+
+  <div class="card">
+    <div class="card-h"><span class="dot" style="background:var(--brand)"></span><h2>הוצאות כלה</h2>
+      <span class="sp note">${money((s.brideExpenses||[]).reduce((a,b)=>a+(b.quote||0),0))}</span></div>
+    ${(s.brideExpenses||[]).map((b,i)=>`<div class="row">
+      <div class="main"><div class="name">${esc(b.item)}</div></div>
+      <input type="number" class="cellnum" data-path="brideExpenses.${i}.quote" value="${b.quote??''}"
+        placeholder="הצעה" style="width:96px" inputmode="numeric">
+      <input type="number" class="cellnum" data-path="brideExpenses.${i}.paid" value="${b.paid??''}"
+        placeholder="שולם" style="width:96px" inputmode="numeric">
+    </div>`).join('')}
+  </div>
+
+  <div class="card">
+    <div class="card-h"><span class="dot" style="background:var(--ink-3)"></span><h2>איך זה עובד</h2></div>
+    <div class="note" style="line-height:1.8">
+      <p><b>איפה הנתונים.</b> קובץ אחד, <code dir="ltr">state.json</code>, ב־repo פרטי
+        <code dir="ltr">RoiSadeh5/ourmoney-data</code>. כל מכשיר שומר גם עותק מקומי,
+        כך שהאפליקציה עובדת גם בלי אינטרנט ומסתנכרנת כשהחיבור חוזר.</p>
+      <p><b>מכשיר חדש.</b> פותחים את הכתובת, אייקון מסד הנתונים ← סנכרון ←
+        מדביקים אסימון. הנתונים יורדים לבד. אין צורך להעלות כלום.</p>
+      <p><b>שני טלפונים במקביל.</b> כל אורח נשמר בנפרד עם חותמת זמן, אז רישום מתנות
+        משני מכשירים לא דורס. אותו אורח בשניהם — האחרון מנצח.</p>
+      <p><b>אם משהו נראה חסר.</b> סנכרון ← «בדיקה: מה יש בשרת». הטבלה משווה מכשיר מול
+        שרת. אדום = חסר. אם חסר במכשיר — «משיכה מהשרת». אם חסר בשרת ובמכשיר יש —
+        «העלאת הכול לשרת».</p>
+      <p><b>גיבוי.</b> «ייצוא JSON» שומר קובץ מלא. שווה לעשות לפני החתונה.</p>
+      <p><b>מתנות.</b> כל מוזמן בשורה נפרדת (לא רק שורת ההזמנה). זוג נפתח לשניים.
+        באולם — «מצב אולם», חיפוש גדול. טעות בסכום — «ביטול» בטוסט.</p>
+      <p><b>אישורי הגעה.</b> בשורת אורח יש וואטסאפ עם הודעה מוכנה, ואפשר להוסיף או לערוך אורח.
+        «העתק לאולם» נותן רשימת מגיעים עם ספירת מנות.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-h"><span class="dot" style="background:var(--warn)"></span><h2>ילדים</h2>
+      <span class="sp note">מנת ילד ${money((s.venue||{}).childPlate)}</span></div>
+    ${(s.children||[]).map(c=>`<div class="row"><div class="main">
+      <div class="name">${esc(c.name)}</div><div class="sub">${esc(c.family||'')}</div></div>
+      <div class="val">${c.age!=null?c.age+' שנים':''}</div></div>`).join('')}
+  </div>`;
+}
+
+/* ================================================================= CAPITAL  *
+ * Loan math ported verbatim from calculator.html. These figures are checked
+ * against the real bank documents (see the doc{} blocks in the seed), so the
+ * formulas must not drift -- vCapital reproduces calculator.html exactly.
+ */
+const spz=(P,r,m)=>{ if(r<=0||m<=0) return {mo:P>0?Math.round(P/Math.max(m,1)):0,ti:0,tp:P};
+  const rm=r/12,f=Math.pow(1+rm,m),mo=P*rm*f/(f-1);
+  return {mo:Math.round(mo),ti:Math.round(mo*m-P),tp:Math.round(mo*m)}; };
+const grc=(P,r,gM,sM)=>{ const g=Math.round(P*r/12),gi=g*gM,s=spz(P,r,sM);
+  return {gMo:g,sMo:s.mo,ti:Math.round(gi+s.ti),tp:Math.round(gi+s.tp)}; };
+const bln=(P,r,m)=>{ const mo=Math.round(P*r/12);
+  return {mo,ti:mo*m,tp:mo*m+P,balloon:P}; };
+const lr=(l,p)=>l.fr!==undefined?l.fr/100:(l.st==='plus'?(p+l.spread)/100:(p-l.spread)/100);
+const lrl=(l,p)=>{ if(l.fr!==undefined) return l.fr===0?'0%':l.fr.toFixed(1)+'%';
+  const r=l.st==='plus'?p+l.spread:p-l.spread;
+  return `P${l.st==='plus'?'+':'-'}${l.spread.toFixed(2)} (${r.toFixed(2)}%)`; };
+
+function amort(P,r,m){
+  const rows=[]; let b=P;
+  if(r<=0){ const mo=Math.round(P/m);
+    for(let i=1;i<=m;i++){ b-=mo; rows.push({n:i,p:mo,i:0,t:mo,b:Math.max(0,b)}); }
+    return rows; }
+  const rm=r/12,f=Math.pow(1+rm,m),pmt=P*rm*f/(f-1);
+  for(let i=1;i<=m;i++){ const ip=b*rm,pp=pmt-ip; b-=pp;
+    rows.push({n:i,p:Math.round(pp),i:Math.round(ip),t:Math.round(pmt),b:Math.max(0,Math.round(b))}); }
+  return rows;
+}
+function amortHTML(P,r,m,title){
+  return `<details class="acc"><summary>לוח סילוקין — ${esc(title)}</summary><div>
+    <table><thead><tr><th>#</th><th class="num">קרן</th><th class="num">ריבית</th>
+      <th class="num">תשלום</th><th class="num">יתרה</th></tr></thead><tbody>
+    ${amort(P,r,m).map(x=>`<tr><td>${x.n}</td><td class="num">${nf.format(x.p)}</td>
+      <td class="num">${nf.format(x.i)}</td><td class="num">${nf.format(x.t)}</td>
+      <td class="num">${nf.format(x.b)}</td></tr>`).join('')}
+    </tbody></table></div></details>`;
+}
+
+// How many monthly payments of a loan starting at l.start (first payment date)
+// have already happened. Drives the live remaining-balance display.
+function monthsPaid(l){
+  if(!l.start) return 0;
+  const s=new Date(l.start+'T00:00:00'), t=new Date(todayISO()+'T00:00:00');
+  if(t<s) return 0;
+  let n=(t.getFullYear()-s.getFullYear())*12+(t.getMonth()-s.getMonth());
+  if(t.getDate()>=s.getDate()) n+=1;
+  return Math.min(Math.max(n,0),l.months);
+}
+
+// Monthly fixed outgoings: active loan payments plus standing expenses.
+// Loans flagged fromSalary are deducted before the salary lands, so counting
+// them against the net figure would double-count.
+function personOutgoings(key){
+  const d=Store.state.capital[key], p=ui.prime;
+  let loansMo=0;
+  d.loans.forEach(l=>{
+    if(l.fromSalary) return;
+    if(l.start&&monthsPaid(l)>=l.months) return;
+    loansMo+=l.doc?l.doc.monthly:spz(l.amount,lr(l,p),l.months).mo;
+  });
+  const fixed=(d.fixedExpenses||[]).reduce((a,f)=>a+(Number(f.amount)||0),0);
+  return {loansMo,fixed,total:loansMo+fixed};
+}
+
+function personIncome(key){
+  const d=Store.state.capital[key];
+  const net=Number(d.income&&d.income.net)||0;
+  const extra=(d.fixedIncomes||[]).reduce((a,f)=>a+(Number(f.amount)||0),0);
+  return {net,extra,total:net+extra};
+}
+
+const KH_CEIL=15700;
+const SLIP_FIELDS=['gross','net','insured','pensionEmp','pensionEr','severance','khEmp','khEr','tax','ni','health',
+                   'creditPts','vacBal','sickBal'];
+// The small decimal fields keep their fraction (2.25 credit points); money fields round.
+const SLIP_DEC=new Set(['creditPts','vacBal','sickBal']);
+function liveSlips(){ return (Store.state.capital&&Store.state.capital.slips)||[]; }
+function slipsOf(person){
+  return liveSlips().filter(x=>x.person===person).sort((a,b)=>(b.period||'').localeCompare(a.period||''));
+}
+function latestSlip(person){ return slipsOf(person)[0]||null; }
+function slipPension(s){
+  return (Number(s.pensionEmp)||0)+(Number(s.pensionEr)||0)+(Number(s.severance)||0);
+}
+function slipKh(s){ return (Number(s.khEmp)||0)+(Number(s.khEr)||0); }
+function periodLabel(ym){
+  if(!ym||ym.length<7) return ym||'';
+  const [y,m]=ym.split('-');
+  return `${Number(m)}.${y}`;
+}
+function avgLast(person,n){
+  const list=slipsOf(person).slice(0,n);
+  if(!list.length) return null;
+  const acc={};
+  SLIP_FIELDS.forEach(k=>{
+    const vals=list.map(s=>Number(s[k])).filter(x=>x>0);
+    acc[k]=vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:0;
+  });
+  acc.n=list.length;
+  return acc;
+}
+function monthsLeftInYear(){
+  return 12-(new Date().getMonth());
+}
+function theoreticalPension(gross){
+  if(!gross) return null;
+  const P={emp:7,er:7.5,sev:8.33}, K={emp:2.5,er:7.5};
+  return {
+    pe:gross*P.emp/100, pr:gross*P.er/100, ps:gross*P.sev/100,
+    ke:gross*K.emp/100, kr:gross*K.er/100,
+    pt:gross*(P.emp+P.er+P.sev)/100, kt:gross*(K.emp+K.er)/100,
+  };
+}
+function ringSvg(pct, colour){
+  const p=Math.max(0,Math.min(100,pct||0));
+  const r=28,c=2*Math.PI*r, dash=c*p/100;
+  return `<svg class="ring" width="72" height="72" viewBox="0 0 72 72" aria-hidden="true">
+    <circle cx="36" cy="36" r="${r}" fill="none" stroke="var(--line)" stroke-width="7"/>
+    <circle cx="36" cy="36" r="${r}" fill="none" stroke="${colour}" stroke-width="7"
+      stroke-linecap="round" stroke-dasharray="${dash} ${c}"
+      transform="rotate(-90 36 36)"/></svg>`;
+}
+
+let slipBlobUrl=null;
+function clearSlipPreview(){
+  if(slipBlobUrl){ URL.revokeObjectURL(slipBlobUrl); slipBlobUrl=null; }
+  const img=$('#slipPrev');
+  if(img){ img.hidden=true; img.removeAttribute('src'); }
+}
+const SLIP_INPUT={gross:'slipGross',net:'slipNet',insured:'slipInsured',
+  pensionEmp:'slipPenEmp',pensionEr:'slipPenEr',severance:'slipSev',
+  khEmp:'slipKhEmp',khEr:'slipKhEr',tax:'slipTax',ni:'slipNi',health:'slipHealth',
+  creditPts:'slipCredit',vacBal:'slipVac',sickBal:'slipSick'};
+function openSlipDlg(person,slip){
+  const n=NAMES();
+  $('#slipPerson').innerHTML=
+    `<option value="roei">${esc(n.groom)}</option><option value="jordan">${esc(n.bride)}</option>`;
+  $('#slipPerson').value=person||'roei';
+  const now=new Date();
+  $('#slipPeriod').value=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  Object.values(SLIP_INPUT).forEach(id=>{ const el=$('#'+id); if(el) el.value=''; });
+  $('#slipStatus').textContent='צלמו את התלוש או העלו קובץ. המספרים נשמרים אחרי סקירה — הקובץ עצמו לא.';
+  $('#slipStatus').classList.remove('ocr-busy');
+  clearSlipPreview();
+  if(slip) fillSlipForm(slip);
+  $('#slipDlg').showModal();
+}
+function fillSlipForm(d){
+  if(d.period) $('#slipPeriod').value=d.period;
+  SLIP_FIELDS.forEach(k=>{
+    const v=d[k], el=$('#'+SLIP_INPUT[k]);
+    if(el&&v!=null&&v!=='') el.value=SLIP_DEC.has(k)?Math.round(v*100)/100:Math.round(v);
+  });
+}
+function readSlipForm(){
+  const num=id=>{ const v=$('#'+id).value; if(v==='') return null; const n=Number(v); return Number.isFinite(n)?n:null; };
+  const out={person:$('#slipPerson').value,period:$('#slipPeriod').value};
+  SLIP_FIELDS.forEach(k=>{ out[k]=num(SLIP_INPUT[k]); });
+  return out;
+}
+function parseIlNum(s){
+  if(s==null) return null;
+  s=String(s).trim().replace(/[^\d.,]/g,'');
+  if(!s) return null;
+  if(s.includes(',')&&s.includes('.')){
+    if(s.lastIndexOf(',')>s.lastIndexOf('.')) s=s.replace(/\./g,'').replace(',','.');
+    else s=s.replace(/,/g,'');
+  }else if((s.match(/,/g)||[]).length>1) s=s.replace(/,/g,'');
+  else if(/^\d{1,3},\d{3}$/.test(s)) s=s.replace(',','');
+  else if(s.includes(',')) s=s.replace(',','.');
+  const n=Number(s);
+  return Number.isFinite(n)?n:null;
+}
+const HE_MON={
+  'ינואר':1,'פברואר':2,'מרץ':3,'אפריל':4,'מאי':5,'יוני':6,
+  'יולי':7,'אוגוסט':8,'ספטמבר':9,'אוקטובר':10,'נובמבר':11,'דצמבר':12,
+  'ינו':1,'פבר':2,'מרס':3,'אפר':4,'יונ':6,'יול':7,'אוג':8,'ספט':9,'אוק':10,'נוב':11,'דצמ':12,
+};
+/* What to pull from a payslip. Keys are ordered specific → generic; min/max
+   filter out the percentage column (7.50, 8.33) that sits next to every
+   amount in most Israeli payslip layouts. */
+const SLIP_SPEC=[
+  {k:'gross',min:1000,keys:['סה״כ ברוטו','סה"כ ברוטו','שכר ברוטו','ברוטו לתשלום','סך ברוטו','ברוטו']},
+  {k:'net',min:1000,keys:['שכר נטו','נטו לתשלום','לתשלום נטו','סה״כ נטו','סה"כ נטו','שכר לתשלום','נטו']},
+  {k:'insured',min:1000,keys:['שכר מבוטח','שכר לקופ״ג','שכר לקופ"ג','שכר לגמל','שכר קובע','ברוטו פנסיה','סכום בסיס','שכר לפנסיה']},
+  {k:'pensionEmp',min:40,keys:['פנסיה עובד','קרן פנסיה עובד','גמל עובד','ניכוי פנסיה','קרן פנסיה']},
+  {k:'pensionEr',min:40,keys:['פנסיה מעביד','פנסיה מעסיק','הפרשת מעביד לפנסיה','גמל מעביד','גמל מעסיק','תגמולי מעביד','תגמולי מעסיק']},
+  {k:'severance',min:40,keys:['פיצויי פיטורין','פיצויי פיטורים','הפרשה לפיצויים','פיצויים']},
+  {k:'khEmp',min:25,keys:['קרן השתלמות עובד','השתלמות עובד','קה״ש עובד','קה"ש עובד']},
+  {k:'khEr',min:25,keys:['קרן השתלמות מעביד','קרן השתלמות מעסיק','השתלמות מעביד','השתלמות מעסיק','קה״ש מעביד','קה"ש מעביד','קרן השתלמות']},
+  {k:'tax',min:25,keys:['מס הכנסה','ניכוי מס']},
+  {k:'ni',min:25,keys:['ביטוח לאומי','דמי ביטוח לאומי']},
+  {k:'health',min:25,keys:['מס בריאות','דמי בריאות','ביטוח בריאות']},
+  {k:'creditPts',min:0.25,max:20,keys:['נקודות זיכוי','נק׳ זיכוי','נק זיכוי','נ.ז.']},
+  {k:'vacBal',min:0,max:400,keys:['יתרת חופשה','יתרת ימי חופשה','חופשה יתרה']},
+  {k:'sickBal',min:0,max:999,keys:['יתרת מחלה','יתרת ימי מחלה','מחלה יתרה']},
+];
+/* pdf.js often returns Hebrew in visual order (mirrored). Flipping the line
+   restores the words but mirrors every number, so digit runs get flipped back. */
+function unvisual(line){
+  const rev=[...String(line)].reverse().join('');
+  return rev.replace(/[0-9][0-9.,:%\/-]*[0-9]|[0-9]/g,m=>[...m].reverse().join(''));
+}
+const HE_HINTS=['ברוטו','נטו','פנסיה','השתלמות','פיצוי','מס הכנסה','ביטוח לאומי','בריאות','זיכוי','חופשה','מחלה','שכר','תלוש'];
+function heScore(lines){
+  const t=lines.join('\n');
+  return HE_HINTS.reduce((a,k)=>a+(t.includes(k)?t.split(k).length-1:0),0);
+}
+/* Number tokens on a line, with their positions. Skips percentages (rate
+   columns) and date components. */
+function lineNums(line){
+  const out=[];
+  const re=/(\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?)/g;
+  let m;
+  while((m=re.exec(line))){
+    const before=line[m.index-1]||'', after=line[m.index+m[0].length]||'';
+    if(after==='%'||before==='%') continue;
+    if(before==='/'||after==='/') continue;                  // date component
+    if(before==='.'&&/\d/.test(line[m.index-2]||'')) continue; // tail of a decimal
+    const v=parseIlNum(m[0]);
+    if(v==null) continue;
+    out.push({v,at:m.index,end:m.index+m[0].length});
+  }
+  return out;
+}
+function parseTlush(input){
+  const lines=(Array.isArray(input)?input:String(input||'').split(/\n+/))
+    .map(l=>String(l).replace(/\u00a0/g,' ').replace(/[ \t]+/g,' ').trim())
+    .filter(Boolean);
+  const n=lines.join('\n');
+  const out={};
+
+  // Nearest plausible number to the keyword on the same line. In an RTL table
+  // flattened left-to-right the amount usually sits BEFORE the label, so both
+  // sides are considered and the closer one wins.
+  const fromLines=spec=>{
+    for(const k of spec.keys){
+      for(const line of lines){
+        const i=line.indexOf(k);
+        if(i<0) continue;
+        const cands=lineNums(line).filter(x=>
+          x.v>=(spec.min??0)&&x.v<=(spec.max??2000000));
+        if(!cands.length) continue;
+        // Slight bias toward the number after the label, so on a line that
+        // carries two label+value pairs each label claims its own value.
+        cands.sort((a,b)=>{
+          const da=a.at>=i+k.length?a.at-(i+k.length):i-a.end+3;
+          const db=b.at>=i+k.length?b.at-(i+k.length):i-b.end+3;
+          return da-db;
+        });
+        return cands[0].v;
+      }
+    }
+    return null;
+  };
+  // Old windowed fallback over the whole text, for OCR soup without line structure.
+  const numAfter=(keys,win)=>{
+    for(const k of keys){
+      const i=n.indexOf(k);
+      if(i<0) continue;
+      const slice=n.slice(i+k.length, i+k.length+(win||70));
+      const m=slice.match(/(\d{1,3}(?:[.,]\d{3})+|\d+)(?:[.,]\d{1,2})?/);
+      if(!m) continue;
+      const v=parseIlNum(m[1]);
+      if(v!=null) return v;
+    }
+    return null;
+  };
+
+  let ym=null;
+  const iso=n.match(/(\d{4})[-\/.](\d{1,2})/);
+  if(iso&&+iso[2]>=1&&+iso[2]<=12) ym=`${iso[1]}-${String(iso[2]).padStart(2,'0')}`;
+  const he=n.match(/לחודש\s+(\S+)\s+(\d{4})/);
+  if(he&&HE_MON[he[1]]) ym=`${he[2]}-${String(HE_MON[he[1]]).padStart(2,'0')}`;
+  const dmy=n.match(/(\d{1,2})[\/.](\d{4})/);
+  if(!ym&&dmy&&+dmy[1]>=1&&+dmy[1]<=12) ym=`${dmy[2]}-${String(dmy[1]).padStart(2,'0')}`;
+  if(ym) out.period=ym;
+
+  SLIP_SPEC.forEach(spec=>{
+    let v=fromLines(spec);
+    if(v==null){
+      v=numAfter(spec.keys);
+      if(v!=null&&(v<(spec.min??0)||v>(spec.max??2000000))) v=null;
+    }
+    if(v!=null) out[spec.k]=v;
+  });
+
+  // A slip where "net" swallowed the gross line (or vice versa) is worse than
+  // an empty box the user fills by eye.
+  if(out.gross!=null&&out.net!=null&&out.net>out.gross) delete out.net;
+  return out;
+}
+function loadScript(src){
+  return new Promise((res,rej)=>{
+    if([...document.scripts].some(s=>s.src===src||s.getAttribute('src')===src)) return res();
+    const el=document.createElement('script');
+    el.src=src; el.onload=res; el.onerror=()=>rej(new Error('טעינת ספרייה נכשלה'));
+    document.head.appendChild(el);
+  });
+}
+async function ensurePdfJs(){
+  if(window.pdfjsLib) return;
+  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js');
+  window.pdfjsLib.GlobalWorkerOptions.workerSrc=
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+async function ensureTesseract(){
+  if(window.Tesseract) return;
+  await loadScript('https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js');
+}
+/* Text out of every page, rebuilt into visual lines: pdf.js hands back loose
+   items; grouping them by their y coordinate and sorting by x recovers the
+   table rows, which is what the parser feeds on. */
+async function pdfExtract(file){
+  await ensurePdfJs();
+  const buf=await file.arrayBuffer();
+  const pdf=await window.pdfjsLib.getDocument({data:buf}).promise;
+  let lines=[], canvas=null;
+  for(let p=1;p<=pdf.numPages;p++){
+    const page=await pdf.getPage(p);
+    const tc=await page.getTextContent();
+    const items=tc.items
+      .filter(it=>it.str&&it.str.trim())
+      .map(it=>({x:it.transform[4],y:it.transform[5],s:it.str}))
+      .sort((a,b)=>b.y-a.y||a.x-b.x);
+    let cur=null,curY=null;
+    for(const it of items){
+      if(cur&&Math.abs(it.y-curY)<=4){ cur.push(it); }
+      else{
+        if(cur) lines.push(cur.sort((a,b)=>a.x-b.x).map(i=>i.s).join(' '));
+        cur=[it]; curY=it.y;
+      }
+    }
+    if(cur) lines.push(cur.sort((a,b)=>a.x-b.x).map(i=>i.s).join(' '));
+    if(p===1){
+      const viewport=page.getViewport({scale:2});
+      canvas=document.createElement('canvas');
+      canvas.width=viewport.width; canvas.height=viewport.height;
+      await page.render({canvasContext:canvas.getContext('2d'),viewport}).promise;
+    }
+  }
+  lines=lines.map(l=>l.replace(/\s+/g,' ').trim()).filter(Boolean);
+  // Some producers store Hebrew mirrored; keep whichever direction actually
+  // contains the payslip vocabulary.
+  const flipped=lines.map(unvisual);
+  if(heScore(flipped)>heScore(lines)) lines=flipped;
+  return {lines, text:lines.join('\n'), canvas};
+}
+async function ocrSource(src, status){
+  await ensureTesseract();
+  status('קורא את התלוש… זה יכול לקחת רגע');
+  const {data}=await window.Tesseract.recognize(src,'heb+eng');
+  return data&&data.text||'';
+}
+async function ingestSlipFile(file){
+  const status=msg=>{
+    const el=$('#slipStatus'); if(!el) return;
+    el.textContent=msg; el.classList.toggle('ocr-busy',/קורא|טוען/.test(msg));
+  };
+  clearSlipPreview();
+  try{
+    status('טוען…');
+    let src=null, preview=null;
+    if(file.type==='application/pdf'||/\.pdf$/i.test(file.name||'')){
+      const {lines,text,canvas}=await pdfExtract(file);
+      preview=canvas.toDataURL('image/jpeg',0.7);
+      const img=$('#slipPrev'); img.src=preview; img.hidden=false;
+      // A scanned PDF has an image and (almost) no text layer — OCR it instead.
+      src=(text.replace(/\s/g,'').length||0)<80
+        ? await ocrSource(canvas,status)
+        : lines;
+    }else{
+      preview=URL.createObjectURL(file);
+      slipBlobUrl=preview;
+      const img=$('#slipPrev'); img.src=preview; img.hidden=false;
+      src=await ocrSource(file,status);
+    }
+    const parsed=parseTlush(src);
+    fillSlipForm(parsed);
+    const filled=SLIP_FIELDS.filter(k=>parsed[k]!=null).length;
+    status(filled
+      ? `נשלפו ${filled} נתונים — בדקו מול התמונה לפני שמירה`
+      : 'לא הצלחתי לקרוא מספרים. מלאו מהעין לפי התמונה');
+  }catch(e){
+    status('הקריאה נכשלה — מלאו ידנית. '+(e.message||''));
+  }
+}
+
+/* ------------------------------------------------------------ slips as data */
+const SLIP_HE={period:'חודש',person:'מי',gross:'ברוטו',net:'נטו',insured:'שכר מבוטח',
+  pensionEmp:'פנסיה עובד',pensionEr:'פנסיה מעביד',severance:'פיצויים',
+  khEmp:'קה״ש עובד',khEr:'קה״ש מעביד',tax:'מס הכנסה',ni:'ביטוח לאומי',health:'בריאות',
+  creditPts:'נק׳ זיכוי',vacBal:'יתרת חופשה',sickBal:'יתרת מחלה'};
+function openSlipDb(){
+  const n=NAMES();
+  const who=p=>p==='jordan'?n.bride:n.groom;
+  const slips=[...liveSlips()].sort((a,b)=>
+    (b.period||'').localeCompare(a.period||'')||(a.person||'').localeCompare(b.person||''));
+  const cell=v=>v==null?'<td class="num">—</td>':`<td class="num">${nf.format(Math.round(v))}</td>`;
+  $('#slipDbBody').innerHTML=slips.length?`<div class="tscroll"><table>
+    <thead><tr><th>חודש</th><th>מי</th><th class="num">ברוטו</th><th class="num">נטו</th>
+      <th class="num">פנסיה</th><th class="num">קה״ש</th><th class="num">מסים</th><th></th></tr></thead>
+    <tbody>${slips.map(s=>`
+      <tr data-act="slip-edit" data-editslip="${esc(s.id)}" style="cursor:pointer">
+        <td>${esc(periodLabel(s.period))}</td><td>${esc(who(s.person))}</td>
+        ${cell(s.gross)}${cell(s.net)}
+        ${cell(slipPension(s)||null)}${cell(slipKh(s)||null)}
+        ${cell((Number(s.tax)||0)+(Number(s.ni)||0)+(Number(s.health)||0)||null)}
+        <td><button class="btn btn-d sm" data-delslip="${esc(s.id)}">✕</button></td>
+      </tr>`).join('')}
+    </tbody></table></div>`
+    :'<div class="empty">עדיין אין תלושים</div>';
+  if(!$('#slipDbDlg').open) $('#slipDbDlg').showModal();
+}
+function slipsCsv(){
+  const n=NAMES();
+  const who=p=>p==='jordan'?n.bride:n.groom;
+  const cols=['period','person',...SLIP_FIELDS];
+  const head=cols.map(c=>SLIP_HE[c]||c).join(',');
+  const rows=[...liveSlips()]
+    .sort((a,b)=>(a.period||'').localeCompare(b.period||''))
+    .map(s=>cols.map(c=>c==='person'?who(s.person):(s[c]??'')).join(','));
+  // BOM so Excel opens the Hebrew headers correctly.
+  const blob=new Blob(['\ufeff'+[head,...rows].join('\r\n')],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`ourmoney-slips-${todayISO()}.csv`;
+  a.click(); URL.revokeObjectURL(a.href);
+  toast('קובץ ה־CSV ירד');
+}
+
+/* -------------------------------------------------------- pension forecast  */
+function slipDeposits(key){
+  const avg=avgLast(key,3);
+  if(avg){
+    const pen=avg.pensionEmp+avg.pensionEr+avg.severance, kh=avg.khEmp+avg.khEr;
+    if(pen+kh>0) return {pen,kh,src:`ממוצע ${avg.n===1?'תלוש אחד':avg.n+' תלושים'}`};
+  }
+  const g=Number(Store.state.capital[key].income&&Store.state.capital[key].income.gross)||0;
+  const t=theoreticalPension(g);
+  if(t) return {pen:t.pt,kh:t.kt,src:'מחושב מהברוטו — אין תלושים'};
+  return {pen:0,kh:0,src:'אין נתוני הפקדות'};
+}
+/* Monthly compounding on today's balances plus the monthly deposits from the
+   slips; deposits grow once a year with the salary. Nominal terms, no fees. */
+function pensionSim(key,years,retPct,growPct){
+  const a=Store.state.capital[key].assets||{};
+  let P=Number(a.pension)||0, K=Number(a.kh)||0,
+      G=(Number(a.gemel_analyst)||0)+(Number(a.gemel_altshuler)||0);
+  const dep=slipDeposits(key);
+  let dPen=dep.pen,dKh=dep.kh;
+  const r=retPct/100/12;
+  const series=[P+K+G];
+  for(let m=1;m<=years*12;m++){
+    P=P*(1+r)+dPen; K=K*(1+r)+dKh; G=G*(1+r);
+    if(m%12===0){
+      series.push(P+K+G);
+      dPen*=1+growPct/100; dKh*=1+growPct/100;
+    }
+  }
+  return {series,pension:P,kh:K,gemel:G,total:P+K+G,dep};
+}
+const moneyK=n=>n>=995000?'₪'+(n/1e6).toFixed(1)+'M':n>=1000?'₪'+Math.round(n/1e3)+'K':money(n);
+function fcChart(sR,sJ,sT){
+  const W=340,H=150,padX=8,padY=12;
+  const max=Math.max(...sT,1);
+  const pts=s=>s.map((v,i)=>
+    `${(padX+i/(s.length-1)*(W-2*padX)).toFixed(1)},${(H-padY-v/max*(H-2*padY)).toFixed(1)}`).join(' ');
+  const line=(s,c,w)=>`<polyline points="${pts(s)}" fill="none" stroke="${c}" stroke-width="${w}" stroke-linejoin="round"/>`;
+  return `<div style="direction:ltr">
+    <svg viewBox="0 0 ${W} ${H}" style="width:100%;display:block" role="img" aria-label="תחזית צבירה">
+      <line x1="${padX}" y1="${H-padY}" x2="${W-padX}" y2="${H-padY}" stroke="var(--line-2)"/>
+      <line x1="${padX}" y1="${padY}" x2="${W-padX}" y2="${padY}" stroke="var(--line)" stroke-dasharray="3 4"/>
+      <text x="${padX+2}" y="${padY-3}" fill="var(--ink-3)" font-size="9">${moneyK(max)}</text>
+      ${line(sR,'var(--brand)',1.6)}${line(sJ,'var(--plum)',1.6)}${line(sT,'var(--good-2)',2.6)}
+    </svg></div>`;
+}
+function pensionForecastCard(){
+  const n=NAMES(), f=ui.fc;
+  const R=pensionSim('roei',f.years,f.ret,f.growth);
+  const J=pensionSim('jordan',f.years,f.ret,f.growth);
+  if(R.series[0]+J.series[0]<=0&&R.dep.pen+R.dep.kh+J.dep.pen+J.dep.kh<=0) return '';
+  const T=R.series.map((v,i)=>v+J.series[i]);
+  const at=y=>y<T.length?T[y]:T[T.length-1];
+  const start=T[0];
+  const person=(sim,name,colour)=>`
+    <div class="spaced" style="padding:.7rem 0;border-bottom:1px solid var(--line)">
+      <div style="display:flex;gap:.5rem;align-items:baseline;flex-wrap:wrap">
+        <span class="dot" style="background:${colour}"></span><b>${esc(name)}</b>
+        <span class="note">מפקיד ${money(sim.dep.pen+sim.dep.kh)}/חד׳ · ${esc(sim.dep.src)}</span>
+        <span class="sp" style="margin-inline-start:auto;font-weight:800;color:var(--good-2)">${money(sim.total)}</span>
+      </div>
+      <div class="note">בעוד ${f.years} שנים: פנסיה ${money(sim.pension)} · קה״ש ${money(sim.kh)}${sim.gemel?` · גמל ${money(sim.gemel)}`:''}</div>
+    </div>`;
+  return `<div class="card">
+    <div class="card-h"><span class="dot" style="background:var(--good)"></span>
+      <h2>חיזוי פנסיוני</h2>
+      <span class="sp note">היום ${money(start)}</span></div>
+    <div class="grid g3">
+      <label class="fld"><span>תשואה שנתית — <b style="color:var(--brand-2)">${f.ret.toFixed(2)}%</b></span>
+        <input type="range" id="fcRet" min="0" max="10" step="0.25" value="${f.ret}" style="min-height:auto"></label>
+      <label class="fld"><span>גידול שכר — <b style="color:var(--brand-2)">${f.growth.toFixed(2)}%</b></span>
+        <input type="range" id="fcGrowth" min="0" max="8" step="0.5" value="${f.growth}" style="min-height:auto"></label>
+      <label class="fld"><span>אופק — <b style="color:var(--brand-2)">${f.years} שנים</b></span>
+        <input type="range" id="fcYears" min="5" max="40" step="1" value="${f.years}" style="min-height:auto"></label>
+    </div>
+    ${fcChart(R.series,J.series,T)}
+    <div class="grid g3" style="margin-top:.6rem">
+      ${statMini('בעוד 5 שנים',money(at(5)))}
+      ${statMini('בעוד 10 שנים',money(at(10)))}
+      ${statMini(`בעוד ${f.years} שנים`,money(at(f.years)),'var(--good)')}
+    </div>
+    ${person(R,n.groom,'var(--brand)')}${person(J,n.bride,'var(--plum)')}
+    <p class="note" style="margin-top:.5rem">צבירה נומינלית על היתרות של היום (פנסיה, קה״ש וגמל)
+    בתוספת ההפקדות החודשיות מהתלושים; ההפקדות עולות עם השכר פעם בשנה, הגמל צומח בלי הפקדות.
+    בלי דמי ניהול ובלי מס — תרחיש, לא הבטחה.</p>
+  </div>`;
+}
+
+function personCard(key,title,colour){
+  const d=Store.state.capital[key], p=ui.prime;
+  const assets=Object.entries(d.assets);
+  const totalAssets=assets.reduce((a,[,v])=>a+(Number(v)||0),0);
+  const fixed=d.fixedExpenses||[];
+  const totFix=fixed.reduce((a,f)=>a+(Number(f.amount)||0),0);
+
+  const rows=d.loans.map((l,i)=>{
+    const r=lr(l,p), s=spz(l.amount,r,l.months);
+    const paidN=monthsPaid(l);
+    const rem=!l.start?l.amount
+      : paidN<=0?l.amount
+      : paidN>=l.months?0
+      : amort(l.amount,r,l.months)[paidN-1].b;
+    const done=!!l.start&&paidN>=l.months;
+    const mo=done?0:(l.doc?l.doc.monthly:s.mo), ti=l.doc?l.doc.interest:s.ti;
+    return {l,i,r,mo,ti,paidN,rem,done};
+  });
+  const totMo=rows.reduce((a,x)=>a+x.mo,0), totTi=rows.reduce((a,x)=>a+x.ti,0);
+  const totRem=rows.reduce((a,x)=>a+x.rem,0);
+  const net=totalAssets-totRem;
+
+  return `<div class="card">
+    <div class="card-h"><span class="dot" style="background:${colour}"></span><h2>${title}</h2>
+      <span class="sp note">נכסים ${money(totalAssets)}</span></div>
+
+    <div class="grid g2">
+      <div>
+        <div class="note" style="font-weight:700;margin-bottom:.3rem">הכנסה חודשית</div>
+        <div class="row"><div class="main"><div class="name">ברוטו</div></div>
+          <input type="number" class="cellnum inln" data-path="capital.${key}.income.gross"
+            value="${d.income&&d.income.gross!=null?d.income.gross:''}" style="width:100px" inputmode="numeric"></div>
+        <div class="row"><div class="main"><div class="name">נטו</div></div>
+          <input type="number" class="cellnum inln" data-path="capital.${key}.income.net"
+            value="${d.income&&d.income.net!=null?d.income.net:''}" style="width:100px" inputmode="numeric"></div>
+        ${(d.fixedIncomes||[]).map((f,i)=>`<div class="row">
+          <div class="main"><div class="name">${esc(f.name)}</div></div>
+          <input type="number" class="cellnum inln" data-path="capital.${key}.fixedIncomes.${i}.amount"
+            value="${f.amount??''}" style="width:90px" inputmode="numeric">
+          <button class="btn btn-d sm" data-delfixin="${key}.${i}">מחיקה</button>
+        </div>`).join('')}
+        <button class="btn btn-o sm" style="margin:.3rem 0 .5rem" data-addfixin="${key}">+ הכנסה קבועה</button>
+        <div class="row"><div class="main"><b>סה״כ נכנס בחודש</b></div>
+          <div class="val" style="color:var(--good-2)">${money(personIncome(key).total)}</div></div>
+
+        <div class="note" style="font-weight:700;margin:.7rem 0 .3rem">נכסים וחסכונות</div>
+        ${assets.map(([k,v])=>`<div class="row">
+          <div class="main"><div class="name">${esc(ASSET_HE[k]||k)}</div>
+            ${d.assetMeta&&d.assetMeta[k]?`<div class="sub">${noteLines(d.assetMeta[k])}</div>`:''}</div>
+          <input type="number" class="cellnum" data-path="capital.${key}.assets.${k}"
+            value="${v??''}" style="width:110px" inputmode="numeric">
+        </div>`).join('')}
+        <div class="row"><div class="main"><b>סה״כ</b></div>
+          <div class="val" style="color:var(--good-2)">${money(totalAssets)}</div></div>
+      </div>
+
+      <div>
+        <div class="note" style="font-weight:700;margin-bottom:.3rem">הלוואות</div>
+        ${rows.map(({l,i,r,mo,ti,paidN,rem,done})=>`
+          <div class="spaced" style="padding:.7rem 0;border-bottom:1px solid var(--line)${done?';opacity:.6':''}">
+            <div style="display:flex;gap:.5rem;align-items:baseline;flex-wrap:wrap">
+              <b style="font-size:.88rem">${esc(l.name)}</b>
+              ${done?'<span class="tag t-good">נפרעה ✓</span>'
+                    :`<span class="tag t-mute" dir="ltr">${esc(l.doc?l.doc.rate:lrl(l,p))}</span>`}
+              ${l.fromSalary?'<span class="tag t-brand">יורד מהשכר</span>':''}
+              <span class="sp" style="margin-inline-start:auto;font-weight:700">${done?'':money(mo)+'/חד׳'}</span>
+            </div>
+            <div class="note">קרן
+              <input type="number" class="loanedit inln" data-lp="capital.${key}.loans.${i}.amount"
+                value="${l.amount}" style="width:96px" inputmode="numeric">
+              ·
+              <input type="number" class="loanedit inln" data-lp="capital.${key}.loans.${i}.months"
+                value="${l.months}" style="width:58px" inputmode="numeric"> חד׳
+              ·
+              ${l.fr!==undefined
+                ?`ריבית <input type="number" class="loanedit inln" data-lp="capital.${key}.loans.${i}.fr"
+                    value="${l.fr}" step="0.05" style="width:64px">%`
+                :`P${l.st==='plus'?'+':'−'}<input type="number" class="loanedit inln"
+                    data-lp="capital.${key}.loans.${i}.spread" value="${l.spread}" step="0.05"
+                    style="width:64px">`}
+              · תשלום ראשון
+              <input type="date" class="loanedit inln" data-lp="capital.${key}.loans.${i}.start"
+                value="${l.start||''}" style="width:148px">
+            </div>
+            ${l.start&&!done?`<div class="note">יתרה להיום
+              <b style="color:var(--warn-2)">${money(rem)}</b>
+              · שולמו ${paidN}/${l.months} · נותרו ${l.months-paidN} חד׳
+              ${l.doc&&l.doc.balance?` · לפי דף הבנק: ${money(l.doc.balance)}`:''}</div>`:''}
+            <div class="note">ריבית מצטברת <b style="color:var(--bad-2)">${money(ti)}</b>
+              ${l.doc?` · ${esc(l.doc.start)}–${esc(l.doc.end)}`:''}
+              <button class="btn btn-d sm" data-delloan="${key}.${i}"
+                style="float:inline-end;min-height:24px;padding:.1rem .5rem">מחיקה</button>
+            </div>
+            ${l.doc&&l.doc.note?`<div class="note" style="color:var(--warn-2)">⚠ ${noteLines(l.doc.note)}</div>`:''}
+            ${done?'':amortHTML(l.amount,r,l.months,l.name)}
+          </div>`).join('')}
+        <div class="row"><div class="main"><b>סה״כ החזר חודשי</b></div>
+          <div class="val" style="color:var(--bad-2)">${money(totMo)}/חד׳</div></div>
+        <div class="row"><div class="main"><b>סה״כ יתרות להיום</b></div>
+          <div class="val" style="color:var(--bad-2)">${money(totRem)}</div></div>
+        <div class="row"><div class="main"><b>סה״כ ריבית</b></div>
+          <div class="val" style="color:var(--bad-2)">${money(totTi)}</div></div>
+        <div class="row"><div class="main"><b>נטו — נכסים פחות הלוואות</b></div>
+          <div class="val" style="color:${net>=0?'var(--good-2)':'var(--bad-2)'}">${money(net)}</div></div>
+
+        <div class="note" style="font-weight:700;margin:.7rem 0 .2rem">הוצאות קבועות נוספות</div>
+        ${fixed.map((f,i)=>`<div class="row">
+          <div class="main"><div class="name">${esc(f.name)}</div></div>
+          <input type="number" class="cellnum inln" data-path="capital.${key}.fixedExpenses.${i}.amount"
+            value="${f.amount??''}" style="width:90px" inputmode="numeric">
+          <button class="btn btn-d sm" data-delfix="${key}.${i}">מחיקה</button>
+        </div>`).join('')||'<div class="note">אין — אפשר להוסיף</div>'}
+        <button class="btn btn-o sm" style="margin-top:.4rem" data-addfix="${key}">+ הוצאה קבועה</button>
+        <div class="row"><div class="main"><b>סה״כ קבוע בחודש — הלוואות + קבועות</b>
+          ${rows.some(x=>x.l.fromSalary)?'<div class="sub note">בלי מה שיורד ישירות מהשכר</div>':''}</div>
+          <div class="val" style="color:var(--bad-2)">${money(rows.filter(x=>!x.l.fromSalary&&!x.done).reduce((a,x)=>a+x.mo,0)+totFix)}</div></div>
+        <button class="btn btn-o sm" data-addloan="${key}" style="margin-top:.5rem">+ הלוואה</button>
+      </div>
+    </div>
+  </div>`;
+}
+const ASSET_HE={kh:'קרן השתלמות',pension:'קרן פנסיה',trading_il:'תיק מסחר ישראלי',
+  trading_us:'תיק מסחר אמריקאי',gemel_analyst:'גמל — אנליסט',
+  gemel_altshuler:'גמל — אלטשולר שחם',liquid:'נזיל'};
+
+function vCapital(){
+  const c=Store.state.capital; if(!c) return '<div class="empty">אין נתוני הון</div>';
+  if(c.prime!=null) ui.prime=c.prime;
+  if(c.cpi!=null)   ui.cpi=c.cpi;
+  const p=ui.prime, re=c.realEstate||[];
+  const cost=re.reduce((a,x)=>a+x.cost,0), paid=re.reduce((a,x)=>a+x.paid,0);
+  const gap=cost-paid;
+
+  const calcRes=capCalc();
+  const oR=personOutgoings('roei'), oJ=personOutgoings('jordan');
+  const iR=personIncome('roei'), iJ=personIncome('jordan');
+  const n=NAMES();
+  const left=(i,o)=>i.total-o.total;
+  const together=left(iR,oR)+left(iJ,oJ);
+  const lastR=latestSlip('roei'), lastJ=latestSlip('jordan');
+  const lastPen=(lastR?slipPension(lastR):0)+(lastJ?slipPension(lastJ):0);
+  const lastKh=(lastR?slipKh(lastR):0)+(lastJ?slipKh(lastJ):0);
+  const theoR=theoreticalPension(Number(c.roei.income&&c.roei.income.gross)||0);
+  const theoJ=theoreticalPension(Number(c.jordan.income&&c.jordan.income.gross)||0);
+  const theoPen=(theoR?theoR.pt:0)+(theoJ?theoJ.pt:0);
+  const ringPct=theoPen?lastPen/theoPen*100:0;
+  const slips=[...liveSlips()].sort((a,b)=>(b.period||'').localeCompare(a.period||''));
+  const who=p=>p==='jordan'?n.bride:n.groom;
+  const tl=slips.length?`<div class="tl">${slips.map(s=>`
+    <button type="button" class="chip sm" data-delslip="${esc(s.id)}"
+      title="לחיצה ארוכה לא, לחיצה מוחקת אחרי אישור"
+      >${esc(periodLabel(s.period))} · ${esc(who(s.person))} · ${money(s.net)}</button>`).join('')}</div>
+    <p class="note" style="margin-top:.35rem">לחיצה על חודש מוחקת את התלוש אחרי אישור</p>`
+    :'<p class="note" style="margin-top:.7rem">עדיין אין תלושים — צילום אחד ממלא ברוטו, נטו והפרשות</p>';
+
+  return `
+  <div class="cap-hero">
+    <div class="k">ביחד נשאר בחודש</div>
+    <div class="v" style="--c:${together>=0?'var(--good-2)':'var(--bad-2)'}">${moneyS(together)}</div>
+    <div class="s">נכנס ${money(iR.total+iJ.total)} · קבוע יוצא ${money(oR.total+oJ.total)}</div>
+    <div class="cap-split">
+      <div class="box">
+        <div class="k">${esc(n.groom)}</div>
+        <div class="v" style="color:${left(iR,oR)>=0?'var(--good-2)':'var(--bad-2)'}">${moneyS(left(iR,oR))}</div>
+        <div class="note">נכנס ${money(iR.total)} · יוצא ${money(oR.total)}</div>
+      </div>
+      <div class="box">
+        <div class="k">${esc(n.bride)}</div>
+        <div class="v" style="color:${left(iJ,oJ)>=0?'var(--good-2)':'var(--bad-2)'}">${moneyS(left(iJ,oJ))}</div>
+        <div class="note">נכנס ${money(iJ.total)} · יוצא ${money(oJ.total)}</div>
+      </div>
+    </div>
+    ${lastPen?`<div class="ring-row">
+      ${ringSvg(ringPct,'var(--good)')}
+      <div>
+        <div class="k">הפקדות פנסיה בתלוש האחרון</div>
+        <div class="v" style="font-size:1.35rem;color:var(--good-2)">${money(lastPen)}<span class="note"> /חד׳</span></div>
+        <div class="note">${lastKh?`קה״ש ${money(lastKh)} · `:''}${theoPen?`מול מקסימום תיאורטי ${money(theoPen)}`:''}</div>
+      </div>
+    </div>`:''}
+    ${tl}
+    <div style="display:flex;gap:.45rem;justify-content:center;flex-wrap:wrap;margin-top:.85rem">
+      <button class="btn btn-p sm" data-addslip="roei">תלוש — ${esc(n.groom)}</button>
+      <button class="btn btn-p sm" data-addslip="jordan">תלוש — ${esc(n.bride)}</button>
+      ${slips.length?`<button class="btn btn-o sm" data-act="slipdb-open">מאגר תלושים</button>`:''}
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:.85rem">
+    <div class="card-h"><span class="dot" style="background:var(--brand)"></span><h2>תרחיש ריבית</h2></div>
+    <div class="grid g2">
+      <label class="fld"><span>ריבית פריים — <b style="color:var(--brand-2)">${p.toFixed(2)}%</b></span>
+        <input type="range" id="prime" min="2" max="12" step="0.25" value="${p}" style="min-height:auto"></label>
+      <label class="fld"><span>מדד מחירים לצרכן — <b style="color:var(--brand-2)">${ui.cpi.toFixed(2)}%</b></span>
+        <input type="range" id="cpi" min="0" max="8" step="0.25" value="${ui.cpi}" style="min-height:auto"></label>
+    </div>
+    <div class="chips" style="margin-top:.6rem">
+      <button class="chip" data-sc="4,1.5">אופטימי</button>
+      <button class="chip" data-sc="5,2.5">היום (פריים 5%)</button>
+      <button class="chip" data-sc="7.5,4.5">קיצון</button>
+    </div>
+  </div>
+
+  ${personCard('roei',NAMES().groom,'var(--brand)')}
+  ${personCard('jordan',NAMES().bride,'var(--plum)')}
+  ${socialCard()}
+  ${pensionForecastCard()}
+
+  <div class="card">
+    <div class="card-h"><span class="dot" style="background:var(--good)"></span><h2>תיק נדל״ן</h2>
+      <span class="sp note">${money(cost)}</span></div>
+    ${re.map((x,i)=>`<div style="padding:.6rem 0;border-bottom:1px solid var(--line)">
+      <div style="display:flex;gap:.5rem;align-items:baseline;flex-wrap:wrap">
+        <b>${esc(x.name)}</b>
+        <span class="tag ${x.paid>=x.cost?'t-good':'t-bad'}">${x.paid>=x.cost?'שולם במלואו':money(x.cost-x.paid)+' לגייס'}</span>
+        <span class="sp" style="margin-inline-start:auto;font-weight:700">${money(x.cost)}</span>
+      </div>
+      <div class="note">${esc(x.status)} · היתר בנייה ${esc(x.estPermit)}
+        · חלק ${NAMES().groom} ${money(x.roeiShare)} · חלק ${NAMES().bride} ${money(x.jordanShare)}</div>
+      ${x.notes?`<div class="note">${esc(x.notes)}</div>`:''}
+      <div class="note" style="margin-top:.3rem">שולם
+        <input type="number" class="cellnum" data-path="capital.realEstate.${i}.paid" value="${x.paid}"
+          style="width:110px;display:inline-block;min-height:28px;padding:.15rem .4rem" inputmode="numeric"></div>
+    </div>`).join('')}
+    <div class="grid g3" style="margin-top:.7rem">
+      ${mini('סה״כ תיק',cost)}${mini('שולם',paid,'var(--good-2)')}
+      ${mini('נותר לגייס',gap,gap>0?'var(--bad-2)':'var(--good-2)')}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-h"><span class="dot" style="background:var(--warn)"></span><h2>מחשבון הלוואה</h2></div>
+    <div class="grid g3">
+      <label class="fld"><span>סכום (₪)</span><input type="number" id="cAm" value="${ui.calc.amount}" step="1000" inputmode="numeric"></label>
+      <label class="fld"><span>סוג ריבית</span><select id="cRT">
+        <option value="pp" ${ui.calc.rt==='pp'?'selected':''}>פריים + מרווח</option>
+        <option value="pm" ${ui.calc.rt==='pm'?'selected':''}>פריים − מרווח</option>
+        <option value="fx" ${ui.calc.rt==='fx'?'selected':''}>קבועה</option>
+        <option value="fc" ${ui.calc.rt==='fc'?'selected':''}>קבועה + מדד</option>
+      </select></label>
+      <label class="fld"><span>מרווח / ריבית (%)</span><input type="number" id="cSpr" value="${ui.calc.spread}" step="0.1"></label>
+      <label class="fld"><span>סוג הלוואה</span><select id="cTy">
+        <option value="sp" ${ui.calc.ty==='sp'?'selected':''}>שפיצר</option>
+        <option value="gr" ${ui.calc.ty==='gr'?'selected':''}>גרייס + שפיצר</option>
+        <option value="bl" ${ui.calc.ty==='bl'?'selected':''}>בלון</option>
+      </select></label>
+      <label class="fld"><span>תקופה (חודשים)</span><input type="number" id="cMo" value="${ui.calc.months}" inputmode="numeric"></label>
+      ${ui.calc.ty!=='sp'?`<label class="fld"><span>חודשי גרייס</span>
+        <input type="number" id="cGr" value="${ui.calc.grace}" inputmode="numeric"></label>`:''}
+    </div>
+    ${calcRes}
+  </div>`;
+}
+
+/* Pension: actuals from the latest payslip, with the statutory maximum as a
+   comparison. Forecast = average of last 3 slips × months left this year. */
+function socialCard(){
+  const n=NAMES();
+  const left=monthsLeftInYear();
+  const person=(key,name)=>{
+    const g=Number(Store.state.capital[key].income&&Store.state.capital[key].income.gross)||0;
+    const slip=latestSlip(key);
+    const theo=theoreticalPension(g);
+    const avg=avgLast(key,3);
+    if(!slip&&!theo) return '';
+    const pe=slip?Number(slip.pensionEmp)||0:theo.pe;
+    const pr=slip?Number(slip.pensionEr)||0:theo.pr;
+    const ps=slip?Number(slip.severance)||0:theo.ps;
+    const ke=slip?Number(slip.khEmp)||0:theo.ke;
+    const kr=slip?Number(slip.khEr)||0:theo.kr;
+    const pt=pe+pr+ps, kt=ke+kr;
+    const insured=slip&&slip.insured;
+    const src=slip?`תלוש ${periodLabel(slip.period)}`:'מחושב מהברוטו — אין תלוש עדיין';
+    const over=g>KH_CEIL;
+    const fPen=avg?((avg.pensionEmp+avg.pensionEr+avg.severance)*left):pt*left;
+    const fKh=avg?((avg.khEmp+avg.khEr)*left):kt*left;
+    return `<div class="spaced" style="padding:.8rem 0;border-bottom:1px solid var(--line)">
+      <div style="display:flex;gap:.5rem;align-items:baseline;flex-wrap:wrap">
+        <b>${esc(name)}</b>
+        <span class="note">${src}${g?` · ברוטו ${money(g)}`:''}${insured?` · מבוטח ${money(insured)}`:''}</span>
+        <span class="sp" style="margin-inline-start:auto;font-weight:800;color:var(--good-2)">${money(pt+kt)}/חד׳</span>
+      </div>
+      ${insured&&g&&insured<g*0.95?`<div class="warnbox" style="margin-top:.45rem">השכר המבוטח נמוך מהברוטו — הפנסיה לא יורדת על כל המשכורת.</div>`:''}
+      <div class="note"><b>פנסיה — ${money(pt)}/חד׳</b><br>
+        עובד ${money(pe)}${theo?` · תיאוריה ${money(theo.pe)}`:''}<br>
+        מעביד ${money(pr)}${theo?` · תיאוריה ${money(theo.pr)}`:''}<br>
+        פיצויים ${money(ps)}${theo?` · תיאוריה ${money(theo.ps)}`:''}</div>
+      <div class="note"><b>קרן השתלמות — ${money(kt)}/חד׳</b><br>
+        עובד ${money(ke)} · מעביד ${money(kr)}
+        ${over?`<br>הברוטו מעל תקרת ההטבה (~${money(KH_CEIL)}) — רווחים מעל התקרה חייבים במס.`:''}</div>
+      <div class="note">עד סוף השנה (${left} חד׳)${avg?` לפי ממוצע ${avg.n} תלושים`:''}:
+        פנסיה ${money(fPen)} · קה״ש ${money(fKh)} · <b>סה״כ ${money(fPen+fKh)}</b></div>
+    </div>`;
+  };
+  const body=person('roei',n.groom)+person('jordan',n.bride);
+  if(!body) return '';
+  return `<div class="card">
+    <div class="card-h"><span class="dot" style="background:var(--good)"></span>
+      <h2>הפרשות לפנסיה וקרן השתלמות</h2></div>
+    ${body}
+    <p class="note" style="margin-top:.5rem">המספרים מגיעים מהתלוש האחרון. התיאוריה היא
+    7% עובד + 7.5% מעביד + 8.33% פיצויים, וקה״ש 2.5% + 7.5% מהברוטו.
+    יתרות הקופות עדיין ידניות — התלוש אומר כמה הופקד, לא כמה יש בקופה.</p>
+  </div>`;
+}
+
+function capCalc(){
+  const {amount:a,months:m,grace:gM,ty,rt,spread:s}=ui.calc;
+  const p=ui.prime,c=ui.cpi;
+  let r,label;
+  if(rt==='pp'){ r=p+s; label=`P+${s.toFixed(1)} = ${r.toFixed(2)}%`; }
+  else if(rt==='pm'){ r=p-s; label=`P−${s.toFixed(1)} = ${r.toFixed(2)}%`; }
+  else if(rt==='fx'){ r=s; label=`${r.toFixed(2)}% קבועה`; }
+  else { r=s+c; label=`${s.toFixed(1)}% + מדד = ${r.toFixed(2)}%`; }
+  const rate=r/100;
+
+  const bar=(prin,int)=>{ const t=prin+int; if(t<=0) return '';
+    return `<div class="bar" style="margin-top:.7rem;height:22px">
+      <i style="width:${prin/t*100}%;background:var(--brand)"></i>
+      <i style="width:${int/t*100}%;background:var(--bad)"></i></div>
+      <div class="chips" style="margin-top:.4rem">
+        <span class="chip sm">קרן ${Math.round(prin/t*100)}%</span>
+        <span class="chip sm">ריבית ${Math.round(int/t*100)}%</span></div>`; };
+
+  if(ty==='sp'){
+    const x=spz(a,rate,m);
+    return `<div class="grid g4" style="margin-top:.85rem">
+      ${statMini('ריבית',label)}${statMini('החזר חודשי',money(x.mo))}
+      ${statMini('סה״כ ריבית',money(x.ti),'var(--bad-2)')}${statMini('סה״כ תשלום',money(x.tp))}
+    </div>`+bar(a,x.ti)+amortHTML(a,rate,m,'הלוואה מחושבת');
+  }
+  if(ty==='gr'){
+    const x=grc(a,rate,gM,Math.max(1,m-gM));
+    return `<div class="grid g4" style="margin-top:.85rem">
+      ${statMini('ריבית',label)}${statMini('בתקופת גרייס',money(x.gMo))}
+      ${statMini('אחר כך',money(x.sMo))}${statMini('סה״כ ריבית',money(x.ti),'var(--bad-2)')}
+    </div>`+bar(a,x.ti);
+  }
+  const x=bln(a,rate,m);
+  return `<div class="grid g4" style="margin-top:.85rem">
+    ${statMini('ריבית',label)}${statMini('חודשי (ריבית בלבד)',money(x.mo))}
+    ${statMini('תשלום בלון בסוף',money(x.balloon),'var(--warn-2)')}
+    ${statMini('סה״כ ריבית',money(x.ti),'var(--bad-2)')}
+  </div>`+bar(a,x.ti);
+}
+const statMini=(k,v,c)=>`<div class="stat" style="--c:${c||'var(--brand)'}">
+  <div class="k">${k}</div><div class="v" style="font-size:1.05rem">${v}</div></div>`;
+
+const GH_TOKEN='ourmoney/gh-token', GH_SHA='ourmoney/gh-sha';
+const POLL_MS=10000;
+
+/* ==================================================================== SYNC  *
+ * State is one JSON file in a private GitHub repo, read and written through
+ * the Contents API. Chosen over a database for one blunt reason: this is the
+ * only backend both the app AND Claude can reach directly, so a problem can be
+ * inspected and repaired at the source instead of relayed through the user.
+ *
+ * The whole document travels at once, so merging is done per entity on a
+ * modified stamp: two phones editing different guests never collide, and the
+ * later edit wins on the same one.
+ * ========================================================================== */
+const b64enc=s=>{ const b=new TextEncoder().encode(s); let x='';
+  b.forEach(c=>{ x+=String.fromCharCode(c); }); return btoa(x); };
+const b64dec=s=>new TextDecoder().decode(
+  Uint8Array.from(atob(String(s).replace(/\s/g,'')),c=>c.charCodeAt(0)));
+
+const Sync={
+  repo:'RoiSadeh5/ourmoney-data', path:'state.json',
+  token:null, sha:null, status:'off', lastError:null, busy:false, timer:null,
+  snap:{guests:{},vendors:{},tasks:{}},
+
+  load(){
+    try{ this.token=localStorage.getItem(GH_TOKEN)||null;
+         this.sha=localStorage.getItem(GH_SHA)||null; }catch(e){}
+    if(this.token) this.status='idle';
+  },
+  saveToken(t){ this.token=t.trim(); localStorage.setItem(GH_TOKEN,this.token); },
+  forget(){ localStorage.removeItem(GH_TOKEN); localStorage.removeItem(GH_SHA);
+            this.token=null; this.sha=null; this.status='off'; this.stop(); },
+  get on(){ return !!this.token; },
+  get who(){ return this.repo; },
+
+  async api(path,opts={}){
+    const r=await fetch(`https://api.github.com/${path}`,{
+      ...opts,
+      headers:{'Authorization':`Bearer ${this.token}`,
+               'Accept':'application/vnd.github+json',
+               'X-GitHub-Api-Version':'2022-11-28',...(opts.headers||{})},
+    });
+    if(r.status===404) return null;
+    if(!r.ok){
+      let msg=''; try{ msg=(await r.json()).message||''; }catch(e){}
+      throw new Error(`${r.status}: ${msg||'שגיאה'}`);
+    }
+    return r.json();
+  },
+
+  /* --------------------------------------------------------------- stamps */
+  clean(o){ const c={...o}; delete c._m; return JSON.stringify(c); },
+  seedSnapshot(){
+    if(!Store.state) return;
+    ['guests','vendors','tasks'].forEach(k=>{
+      this.snap[k]={};
+      (Store.state[k]||[]).forEach(i=>{ this.snap[k][i.id]=this.clean(i); });
+    });
+  },
+  // Anything whose content changed since the last pass gets a fresh stamp, so
+  // no mutation site has to remember to mark itself dirty.
+  stampChanges(){
+    if(!Store.state) return;
+    const now=Date.now();
+    ['guests','vendors','tasks'].forEach(k=>{
+      (Store.state[k]||[]).forEach(i=>{
+        const h=this.clean(i);
+        if(this.snap[k][i.id]!==h){ i._m=now; this.snap[k][i.id]=h; }
+      });
+    });
+  },
+
+  COLD:['meta','venue','income','forecast','forecastIncome','quotes','contacts',
+        'paymentChecklist','events','children','brideExpenses','capital'],
+
+  merge(remote){
+    if(!Store.state){ Store.state=remote; return 1; }
+    let n=0;
+    ['guests','vendors','tasks'].forEach(k=>{
+      const local=Store.state[k]||(Store.state[k]=[]);
+      const byId=new Map(local.map((x,i)=>[x.id,i]));
+      (remote[k]||[]).forEach(r=>{
+        if(byId.has(r.id)){
+          const i=byId.get(r.id), l=local[i];
+          if((r._m||0)>(l._m||0)){ local[i]=r; n++; }
+        }else{ local.push(r); n++; }
+      });
+    });
+    // Cold data moves as a block; the newer stamp wins.
+    if((remote._coldM||0)>(Store.state._coldM||0)){
+      this.COLD.forEach(k=>{ if(remote[k]!==undefined) Store.state[k]=remote[k]; });
+      Store.state._coldM=remote._coldM; n++;
+    }
+    return n;
+  },
+
+  coldChanged(){
+    // A fresh device connects with no state at all -- nothing to stamp yet.
+    if(!Store.state) return false;
+    const h=JSON.stringify(this.COLD.map(k=>Store.state[k]));
+    if(h!==this._coldSnap){ this._coldSnap=h; return true; }
+    return false;
+  },
+
+  /* ----------------------------------------------------------------- pull */
+  async fetchRemote(){
+    const j=await this.api(`repos/${this.repo}/contents/${this.path}`);
+    if(!j) return null;
+    this.sha=j.sha; localStorage.setItem(GH_SHA,j.sha);
+    return JSON.parse(b64dec(j.content));
+  },
+
+  /* ----------------------------------------------------------------- push */
+  async pushNow(){
+    const body=JSON.stringify(Store.state);
+    const payload={message:`sync ${new Date().toISOString()}`,content:b64enc(body)};
+    if(this.sha) payload.sha=this.sha;
+    let j;
+    try{
+      j=await this.api(`repos/${this.repo}/contents/${this.path}`,
+        {method:'PUT',headers:{'Content-Type':'application/json'},
+         body:JSON.stringify(payload)});
+    }catch(e){
+      // 409 means someone else wrote first: take theirs, merge, write again.
+      if(/^409/.test(e.message)){
+        const remote=await this.fetchRemote();
+        if(remote) this.merge(remote);
+        const retry={message:'sync merge',content:b64enc(JSON.stringify(Store.state)),sha:this.sha};
+        j=await this.api(`repos/${this.repo}/contents/${this.path}`,
+          {method:'PUT',headers:{'Content-Type':'application/json'},
+           body:JSON.stringify(retry)});
+      }else throw e;
+    }
+    if(j&&j.content){ this.sha=j.content.sha; localStorage.setItem(GH_SHA,j.content.sha); }
+  },
+
+  async run(){
+    if(!this.on||this.busy) return;
+    this.busy=true; this.setStatus('syncing');
+    try{
+      const remote=await this.fetchRemote();
+      const hadLocal=!!Store.state;
+      if(remote){
+        this.stampChanges();
+        const n=this.merge(remote);
+        if(n){ Store.migrate(); Store.saveNow(); this.seedSnapshot(); render(); }
+        // Bootstrapped from the server just now: seed the cold snapshot so the
+        // next pass doesn't stamp _coldM over data this device never touched.
+        if(!hadLocal) this.coldChanged();
+      }
+      if(hadLocal){
+        this.stampChanges();
+        if(this.coldChanged()) Store.state._coldM=Date.now();
+        await this.pushNow();
+      }
+      this.lastError=null; this.setStatus('ok');
+    }catch(e){ this.lastError=e.message; this.setStatus('error'); }
+    finally{ this.busy=false; }
+  },
+
+  async uploadAll(){
+    Store.state._coldM=Date.now();
+    const now=Date.now();
+    ['guests','vendors','tasks'].forEach(k=>
+      (Store.state[k]||[]).forEach(i=>{ i._m=now; }));
+    this.sha=null;
+    try{ const r=await this.fetchRemote(); }catch(e){}
+    await this.pushNow();
+    this.seedSnapshot();
+    toast('הכול הועלה');
+  },
+
+  async diagnose(){
+    const remote=await this.fetchRemote();
+    const cnt=s=>s?({guests:(s.guests||[]).length,vendors:(s.vendors||[]).length,
+      tasks:(s.tasks||[]).length,
+      payments:(s.vendors||[]).reduce((a,v)=>a+((v.payments||[]).length),0)}):null;
+    return {local:cnt(Store.state),server:cnt(remote),
+            serverDate:remote&&remote.meta?remote.meta.weddingDate:null};
+  },
+
+  looksPartial(){
+    const s=Store.state, why=[];
+    if(!s) return ['אין נתונים כלל'];
+    if(!s.tasks||!s.tasks.length) why.push('אין משימות');
+    if(!s.meta||!s.meta.weddingDate) why.push('אין תאריך חתונה');
+    if(!s.venue||!s.venue.pricePerPlate) why.push('אין מחיר מנה');
+    return why;
+  },
+
+  setStatus(s){
+    this.status=s;
+    const el=document.getElementById('syncPill');
+    if(!el) return;
+    const map={ok:['✓','var(--good-2)','מסונכרן'],syncing:['⟳','var(--brand-2)','מסנכרן…'],
+                error:['⚠','var(--bad-2)',this.lastError||'שגיאה'],
+                idle:['⟳','var(--ink-3)','ממתין'],off:['','','']};
+    const [icon,colour,label]=map[s]||map.off;
+    el.style.display=this.on?'flex':'none';
+    el.style.color=colour; el.title=label; el.textContent=icon;
+  },
+
+  async start(){
+    if(!this.on) return;
+    this.stop();
+    this.seedSnapshot();
+    this.coldChanged();
+    await this.run();
+    this.timer=setInterval(()=>{ if(!document.hidden) this.run(); },POLL_MS);
+  },
+  stop(){ clearInterval(this.timer); this.timer=null; },
+  nudge(){ if(this.on){ clearTimeout(this._n); this._n=setTimeout(()=>this.run(),1500); } },
+};
+
+/* ================================================================== events  */
+const $=s=>document.querySelector(s);
+
+document.addEventListener('click',e=>{
+  const b=e.target.closest('button,[data-act]'); if(!b) return;
+
+  if(b.id==='toastAct'){
+    const fn=undoFn; undoFn=null;
+    document.getElementById('toast').classList.remove('on');
+    if(fn) fn();
+    return;
+  }
+
+  if(b.dataset.v){
+    active=b.dataset.v;
+    if(b.dataset.grsvpgo!==undefined) ui.guestRsvp=b.dataset.grsvpgo;
+    render(); window.scrollTo(0,0);
+    if(b.dataset.grsvpgo!==undefined)
+      document.getElementById('guestList')?.scrollIntoView({block:'start'});
+    return;
+  }
+  if(b.dataset.grsvpgo!==undefined){
+    ui.guestRsvp=b.dataset.grsvpgo;
+    render();
+    document.getElementById('guestList')?.scrollIntoView({block:'start'});
+    return;
+  }
+  if(b.dataset.bview!==undefined){ ui.budgetView=b.dataset.bview; render(); return; }
+  if(b.dataset.gside!==undefined){ ui.guestSide=b.dataset.gside; render(); return; }
+  if(b.dataset.grsvp!==undefined){ ui.guestRsvp=ui.guestRsvp===b.dataset.grsvp?'':b.dataset.grsvp; render(); return; }
+  if(b.dataset.gfilter){ ui.giftFilter=ui.giftFilter===b.dataset.gfilter?'':b.dataset.gfilter; render(); return; }
+  if(b.dataset.gsort){ ui.giftSort=b.dataset.gsort; render(); return; }
+  if(b.dataset.gmore){ ui.giftMore.add(b.dataset.gmore); render(); return; }
+  if(b.dataset.tf){ ui.taskFilter=b.dataset.tf; render(); return; }
+  if(b.dataset.sc){ const [p,c]=b.dataset.sc.split(',').map(Number);
+    ui.prime=p; ui.cpi=c;
+    return Store.update(s=>{ if(s.capital){ s.capital.prime=p; s.capital.cpi=c; } }); }
+
+  if(b.dataset.rsvpset!==undefined){
+    const i=+b.dataset.gi, want=b.dataset.rsvpset;
+    return Store.update(s=>{ const g=s.guests[i]; g.rsvp=g.rsvp===want?'pending':want; });
+  }
+  if(b.dataset.inv!==undefined) return Store.update(s=>{
+    const g=s.guests[+b.dataset.inv]; g.invitationSent=!g.invitationSent; });
+
+  if(b.dataset.gedit!==undefined) return openGuestDlg(+b.dataset.gedit);
+
+  if(b.dataset.gr!==undefined){
+    const i=+b.dataset.gr, k=+b.dataset.gk||0;
+    const prev=giftSnapSlot(giftsOf(Store.state.guests[i])[k]||{});
+    Store.update(s=>{
+      writeGift(s.guests[i], k, {received:!prev.received, date:!prev.received?todayISO():null});
+    });
+    return toastUndo(prev.received?'בוטל סימון התקבל':'סומן כהתקבל',
+      ()=>Store.update(s=>writeGift(s.guests[i], k, prev)));
+  }
+
+  if(b.dataset.td!==undefined) return Store.update(s=>{
+    const t=s.tasks[+b.dataset.td]; t.status=t.status==='done'?'open':'done'; });
+
+  if(b.dataset.pay!==undefined) return addPayment(+b.dataset.pay);
+
+  if(b.dataset.delpay){
+    const [i,j]=b.dataset.delpay.split('.').map(Number);
+    const p=Store.state.vendors[i].payments[j];
+    if(!confirm(`למחוק את ${p&&p.planned?'התשלום המתוכנן':'התשלום'} על ${money(p&&p.amount)}?`)) return;
+    return Store.update(s=>{ s.vendors[i].payments.splice(j,1); });
+  }
+
+  if(b.dataset.delloan){
+    const [k,i]=b.dataset.delloan.split('.');
+    const nm=Store.state.capital[k].loans[+i].name;
+    if(!confirm(`למחוק את ההלוואה «${nm}»?`)) return;
+    return Store.update(s=>{ s.capital[k].loans.splice(+i,1); });
+  }
+  if(b.dataset.addslip) return openSlipDlg(b.dataset.addslip);
+  if(b.dataset.delslip){
+    const id=b.dataset.delslip;
+    const s=(Store.state.capital.slips||[]).find(x=>x.id===id);
+    if(!s||!confirm(`למחוק את תלוש ${periodLabel(s.period)}?`)) return;
+    Store.update(st=>{ st.capital.slips=st.capital.slips.filter(x=>x.id!==id); });
+    if($('#slipDbDlg').open) openSlipDb();
+    return;
+  }
+  if(b.dataset.editslip){
+    const s=liveSlips().find(x=>x.id===b.dataset.editslip);
+    if(!s) return;
+    if($('#slipDbDlg').open) $('#slipDbDlg').close();
+    return openSlipDlg(s.person,s);
+  }
+
+  if(b.dataset.addloan) return addLoan(b.dataset.addloan);
+
+  if(b.dataset.addfix){
+    const name=prompt('שם ההוצאה הקבועה:'); if(!name) return;
+    const amount=Number(prompt('סכום חודשי (₪):','1000')); if(!amount) return;
+    return Store.update(s=>{
+      (s.capital[b.dataset.addfix].fixedExpenses ||= [])
+        .push({id:'f'+Date.now(),name:name.trim(),amount});
+    });
+  }
+  if(b.dataset.delfix){
+    const [k,i]=b.dataset.delfix.split('.');
+    const f=Store.state.capital[k].fixedExpenses[+i];
+    if(!confirm(`למחוק את «${f.name}»?`)) return;
+    return Store.update(s=>{ s.capital[k].fixedExpenses.splice(+i,1); });
+  }
+  if(b.dataset.addfixin){
+    const name=prompt('שם ההכנסה הקבועה:'); if(!name) return;
+    const amount=Number(prompt('סכום חודשי (₪):','1000')); if(!amount) return;
+    return Store.update(s=>{
+      (s.capital[b.dataset.addfixin].fixedIncomes ||= [])
+        .push({id:'in'+Date.now(),name:name.trim(),amount});
+    });
+  }
+  if(b.dataset.delfixin){
+    const [k,i]=b.dataset.delfixin.split('.');
+    const f=Store.state.capital[k].fixedIncomes[+i];
+    if(!confirm(`למחוק את «${f.name}»?`)) return;
+    return Store.update(s=>{ s.capital[k].fixedIncomes.splice(+i,1); });
+  }
+
+  if(b.dataset.markpaid){
+    const [vi,pi]=b.dataset.markpaid.split('.').map(Number);
+    const prev=Object.assign({},Store.state.vendors[vi].payments[pi]);
+    Store.update(s=>{ const p=s.vendors[vi].payments[pi]; p.planned=false; if(!p.date||p.date>todayISO()) p.date=todayISO(); });
+    return toastUndo(`סומן כשולם · ${money(prev.amount)}`,()=>Store.update(s=>{ s.vendors[vi].payments[pi]=prev; }));
+  }
+
+  if(b.dataset.act) return dataAction(b.dataset.act);
+});
+
+document.addEventListener('input',e=>{
+  const t=e.target;
+  if(t.id==='guestQ'){ ui.guestQ=t.value; return filterGuestRows(); }
+  // Sliders update their label live but only re-render on release -- re-rendering
+  // mid-drag would tear the slider out from under the pointer.
+  if(t.id==='prime'||t.id==='cpi'||t.id==='fcRet'||t.id==='fcGrowth'){
+    const b=t.closest('label')?.querySelector('b');
+    if(b) b.textContent=Number(t.value).toFixed(2)+'%';
+  }
+  if(t.id==='fcYears'){
+    const b=t.closest('label')?.querySelector('b');
+    if(b) b.textContent=t.value+' שנים';
+  }
+});
+
+const CALC_FIELDS={cAm:'amount',cMo:'months',cGr:'grace',cSpr:'spread',cRT:'rt',cTy:'ty'};
+
+document.addEventListener('change',e=>{
+  const t=e.target;
+  if(t.id==='guestGroup'){ ui.guestGroup=t.value; return render(); }
+
+  if(t.id==='prime'){ ui.prime=Number(t.value);
+    return Store.update(s=>{ if(s.capital) s.capital.prime=ui.prime; }); }
+  if(t.id==='cpi'){ ui.cpi=Number(t.value);
+    return Store.update(s=>{ if(s.capital) s.capital.cpi=ui.cpi; }); }
+  if(t.id==='fcRet'){ ui.fc.ret=Number(t.value); return render(); }
+  if(t.id==='fcGrowth'){ ui.fc.growth=Number(t.value); return render(); }
+  if(t.id==='fcYears'){ ui.fc.years=Number(t.value); return render(); }
+  if(CALC_FIELDS[t.id]){
+    const key=CALC_FIELDS[t.id];
+    ui.calc[key]=(key==='rt'||key==='ty')?t.value:(Number(t.value)||0);
+    return render();
+  }
+
+  if(t.dataset.rsvp!==undefined) return Store.update(s=>{ s.guests[+t.dataset.rsvp].rsvp=t.value; });
+  if(t.dataset.gm!==undefined){
+    const i=+t.dataset.gm, k=+t.dataset.gk||0;
+    refocus=`button[data-gr="${i}"][data-gk="${k}"]`;
+    return Store.update(s=>writeGift(s.guests[i], k, {method:t.value||null}));
+  }
+
+  if(t.classList.contains('giftamt')){
+    const i=+t.dataset.gi, k=+t.dataset.gk||0;
+    refocus=`select[data-gm="${i}"][data-gk="${k}"]`;
+    const prev=giftSnapSlot(giftsOf(Store.state.guests[i])[k]||{});
+    const v=t.value===''?null:Number(t.value);
+    if(v===prev.amount || (v==null && prev.amount==null)) return;
+    Store.update(s=>{
+      writeGift(s.guests[i], k, {amount:v, date:v!=null?(prev.date||todayISO()):prev.date});
+    });
+    return toastUndo('נרשמה מתנה '+money(v),
+      ()=>Store.update(s=>writeGift(s.guests[i], k, prev)));
+  }
+  if(t.classList.contains('celltxt')){
+    const v=t.value||null;
+    return Store.update(()=>setPath(t.dataset.path,v));
+  }
+  if(t.classList.contains('cellnum')){
+    const v=t.value===''?null:Number(t.value);
+    return Store.update(()=>setPath(t.dataset.path,v));
+  }
+  if(t.classList.contains('loanedit')){
+    const v=t.type==='date'?(t.value||null):(t.value===''?0:Number(t.value));
+    return Store.update(s=>{
+      setPath(t.dataset.lp,v);
+      // The doc{} block quotes the bank paperwork; once the terms are edited
+      // it no longer describes this loan, so the computed figures take over.
+      const m=t.dataset.lp.match(/^capital\.(\w+)\.loans\.(\d+)\./);
+      if(m) delete s.capital[m[1]].loans[+m[2]].doc;
+    });
+  }
+});
+
+function addPayment(i){
+  const v=Store.state.vendors[i];
+  $('#pyVendor').innerHTML=Store.state.vendors.map((x,k)=>
+    x._deleted?'':`<option value="${k}" ${k===i?'selected':''}>${esc(x.name)}</option>`).join('');
+  $('#payDlgTitle').textContent=`תשלום — ${v.name}`;
+  const rest=calc.unscheduledOf(v);
+  $('#pyAmt').value=rest>0?rest:'';
+  $('#pyMethod').value=v.payMethod||'';
+  $('#pyDate').value=v.payDue||'';
+  $('#pyNote').value=''; $('#pyPaid').checked=false; $('#pyDep').checked=false;
+  $('#payDlg').showModal();
+  setTimeout(()=>$('#pyAmt').focus(),50);
+}
+
+function addLoan(key){
+  const name=prompt('שם ההלוואה:'); if(!name) return;
+  const amount=Number(prompt('סכום (₪):','100000')); if(!amount) return;
+  const months=Number(prompt('תקופה בחודשים:','60'))||60;
+  const fr=Number(prompt('ריבית שנתית קבועה (%):','5'))||0;
+  const start=prompt('תאריך תשלום ראשון (YYYY-MM-DD, ריק אם עוד לא התחילה):','')||null;
+  Store.update(s=>{ s.capital[key].loans.push({name:name.trim(),amount,months,fr,start}); });
+  toast('ההלוואה נוספה');
+}
+
+function newGuestId(name){
+  const base=(name||'').trim()||('אורח '+Date.now());
+  if(!Store.state.guests.some(g=>g.id===base)) return base;
+  return base+' · '+Date.now();
+}
+function openGuestDlg(i){
+  const editing=Number.isInteger(i)&&i>=0;
+  const g=editing?Store.state.guests[i]:null;
+  $('#gDlgTitle').textContent=editing?'עריכת אורח':'אורח חדש';
+  $('#gIdx').value=editing?String(i):'';
+  $('#gName').value=g?g.name||'':'';
+  $('#gSide').value=g?(g.side||g.list||'חתן'):'חתן';
+  $('#gGroup').value=g?g.group||'':'';
+  $('#gAd').value=g&&g.adults!=null?g.adults:2;
+  $('#gCh').value=g&&g.children!=null?g.children:0;
+  $('#gPhone').value=g?g.phone||'':'';
+  $('#gNotes').value=g?g.notes||'':'';
+  $('#gDelBtn').hidden=!editing;
+  $('#groupList').innerHTML=guestGroups().map(x=>`<option value="${esc(x)}">`).join('');
+  $('#guestDlg').showModal();
+  setTimeout(()=>$('#gName').focus(),50);
+}
+async function copyText(t){
+  try{ await navigator.clipboard.writeText(t); return true; }
+  catch(e){
+    try{
+      const ta=document.createElement('textarea');
+      ta.value=t; ta.style.position='fixed'; ta.style.insetInlineStart='-9999px';
+      document.body.appendChild(ta); ta.select();
+      const ok=document.execCommand('copy'); ta.remove(); return ok;
+    }catch(e2){ return false; }
+  }
+}
+async function exportRsvp(){
+  const V=Store.state.venue||{}, all=liveGuests();
+  let list=all.filter(g=>g.rsvp==='confirmed'), kind='מאושרים';
+  if(!list.length){
+    list=all.filter(g=>g.rsvp!=='declined');
+    kind='כולם חוץ ממי שביטל — אין עדיין מאושרים';
+  }
+  const adults=list.reduce((a,g)=>a+(g.adults||0),0);
+  const kids=list.reduce((a,g)=>a+(g.children||0),0);
+  const h=calc.headcount();
+  const text=[
+    kind,
+    `מבוגרים ${adults} · ילדים ${kids} · שורות ${list.length}`+
+      (V.minPlates?` · התחייבות ${V.minPlates}`:''),
+    `ממתינים עדיין: ${h.pending} מוזמנים`,
+    '',
+    ...list.map(g=>[g.name,g.adults||0,g.children||0,g.side||'',g.group||'',g.notes||''].join('\t')),
+  ].join('\n');
+  if(await copyText(text)) toast(`הועתקו ${list.length} שורות · ${adults} מנות`);
+  else toast('ההעתקה נכשלה — נסו מהמחשב');
+}
+
+/* ================================================================= EXPORT  *
+ * One report, two shapes. Excel is a real .xlsx (SheetJS, fetched from the
+ * CDN on first use) with three sheets; PDF goes through the browser's print
+ * dialog, which is the only dependency-free way to get Hebrew RTL into a PDF
+ * on a phone -- «שמירה כ־PDF» is one tap away in that dialog.
+ * ========================================================================== */
+// Before the wedding a row «confirms»; after it, it «came». Same field.
+function rsvpWords(){
+  const after=Store.state&&calc.daysLeft()<0;
+  return after
+    ? {yes:'הגיעו',no:'לא הגיעו',pend:'לא ידוע',yes1:'הגיע/ה',no1:'לא הגיע/ה',pend1:'לא ידוע',avgAll:'ממוצע על כל מי שהגיע',who:'הגיעו'}
+    : {yes:'מאושרים',no:'לא מגיעים',pend:'ממתינים',yes1:'מגיע/ה',no1:'לא מגיע/ה',pend1:'ממתין/ה',avgAll:'ממוצע על כל מי שאישר',who:'אישרו'};
+}
+function rsvpLabel(g){ const W=rsvpWords();
+  return g.rsvp==='confirmed'?W.yes1:g.rsvp==='declined'?W.no1:W.pend1; }
+function reportData(){
+  const t=calc.totals(), h=calc.headcount(), gs=giftStats(), m$=moneySummary(), W=rsvpWords();
+  const m=Store.state.meta||{}, n=NAMES(), V=Store.state.venue||{};
+  const guests=[...liveGuests()].sort((a,b)=>(a.name||'').localeCompare(b.name||'','he')).map(g=>{
+    const slots=giftsOf(g).filter(x=>Number(x.amount)>0);
+    const total=giftTotal(g), seat=calc.seatCost(g);
+    return {
+      'שם':g.name||'', 'צד':g.side||g.list||'', 'קבוצה':g.group||'', 'טלפון':g.phone||'',
+      'מבוגרים':g.adults||0, 'ילדים':g.children||0, 'הגעה':rsvpLabel(g),
+      'מתנה':total||'', 'אמצעי':[...new Set(slots.map(x=>methodHe(x.method)).filter(Boolean))].join(', '),
+      'התקבל':slots.length?(slots.every(x=>x.received)?'כן':'חלקית'):'', 'תאריך':slots.map(x=>x.date).filter(Boolean)[0]||'',
+      'עלות מנות':g.rsvp==='declined'?0:(seat||''), 'נטו':total?(g.rsvp==='declined'?total:total-seat):'', 'לאורח':total&&g.adults>1&&g.rsvp!=='declined'?Math.round(total/g.adults):'',
+      'הערות':g.notes||'',
+    };
+  });
+  const vendors=[];
+  liveVendors().forEach(v=>{
+    const paid=calc.paidOf(v), rem=calc.remainOf(v);
+    vendors.push({'ספק':v.name,'עלות':v.total??'','שולם':paid,'מכוסה':v.coveredAmount||'','מי מכסה':v.coveredBy||'','נשאר':rem,
+      'אמצעי ליתרה':methodHe(v.payMethod),'מועד ליתרה':v.payDue||'','הערות':v.notes||''});
+    (v.payments||[]).forEach(p=>vendors.push({'ספק':'   ↳ '+(p.planned?'מתוכנן':'שולם'),'עלות':'','שולם':p.planned?'':p.amount,'מכוסה':'','מי מכסה':'',
+      'נשאר':p.planned?p.amount:'','אמצעי ליתרה':methodHe(p.method),'מועד ליתרה':p.date||'','הערות':[p.deposit?'פיקדון':'',p.note||''].filter(Boolean).join(' · ')}));
+  });
+  const summary=[
+    ['החתונה של',`${n.groom} & ${n.bride}`],['תאריך',dmy(m.weddingDate)],['מקום',m.venueName||''],['הופק',new Date().toLocaleString('he-IL')],
+    [],
+    ['מוזמנים (מקומות)',h.invited],[W.yes,h.confirmed],[W.no,h.declined],[W.pend,h.pending],['שורות הזמנה',h.rows],['ילדים',h.kids],
+    [],
+    ['סה״כ עלות החתונה',t.cost],['שילמנו עד כה',t.paid],['מכוסה על ידי אחרים',t.covered],['נשאר לשלם',t.remaining],['מתוכנן',m$.planned],['בלי מועד',m$.unplanned],
+    [],
+    ['מתנות שנרשמו',t.gifts],['מתנות שהתקבלו',t.giftsIn],['מזה מההורים',m$.parents],['מזה מאורחים',gs.total],
+    ['משפחות שנתנו',gs.rows],['מעטפות',gs.envelopes],['ממוצע לאורח שנתן',Math.round(gs.perSeat)],
+    ['אורחים שהביאו מתנה (מקומות)',gs.coveredSeats],['מתוך אורחים ש'+W.who,gs.confirmedSeats],['עוד לא הביאו (אורחים / משפחות)',`${gs.notYetSeats} / ${gs.notYet}`],
+    ['מחיר מנה',gs.plate],['נטו לאורח מול מנה',Math.round(gs.perSeat-gs.plate)],
+    [],
+    ['מאזן — מתנות פחות כל העלויות',t.giftsIn-t.paid-t.remaining],
+  ];
+  return {summary,guests,vendors,W};
+}
+async function exportXlsx(){
+  toast('מכין קובץ אקסל…');
+  try{
+    if(!window.XLSX) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
+    const R=reportData(), X=window.XLSX, wb=X.utils.book_new();
+    wb.Workbook={Views:[{RTL:true}]};
+    const ws1=X.utils.aoa_to_sheet(R.summary); ws1['!cols']=[{wch:30},{wch:22}];
+    const ws2=X.utils.json_to_sheet(R.guests);
+    ws2['!cols']=[28,7,16,14,8,6,11,10,12,8,11,10,10,9,30].map(w=>({wch:w}));
+    const ws3=X.utils.json_to_sheet(R.vendors); ws3['!cols']=[30,10,10,10,14,10,12,12,40].map(w=>({wch:w}));
+    X.utils.book_append_sheet(wb,ws1,'סיכום');
+    X.utils.book_append_sheet(wb,ws2,'אורחים ומתנות');
+    X.utils.book_append_sheet(wb,ws3,'ספקים ותשלומים');
+    X.writeFile(wb,`ourmoney-${todayISO()}.xlsx`);
+    toast('קובץ האקסל ירד');
+  }catch(e){ toast('ייצוא נכשל: '+(e.message||e)); }
+}
+function exportPdf(){
+  const R=reportData(), n=NAMES(), m=Store.state.meta||{};
+  const cell=v=>typeof v==='number'?nf.format(v):esc(v);
+  const table=(rows,cols)=>`<table><thead><tr>${cols.map(c=>`<th>${esc(c)}</th>`).join('')}</tr></thead>
+    <tbody>${rows.map(r=>`<tr>${cols.map(c=>`<td class="${typeof r[c]==='number'?'n':''}">${cell(r[c])}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+  const sum=`<table class="sum"><tbody>${R.summary.map(r=>r.length?`<tr><td>${esc(r[0])}</td><td class="n">${cell(r[1])}</td></tr>`:'<tr class="gap"><td colspan="2"></td></tr>').join('')}</tbody></table>`;
+  const gcols=['שם','צד','קבוצה','מבוגרים','ילדים','הגעה','מתנה','אמצעי','התקבל','עלות מנות','נטו','הערות'];
+  const vcols=['ספק','עלות','שולם','מכוסה','נשאר','אמצעי ליתרה','מועד ליתרה','הערות'];
+  const html=`<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8">
+  <title>OurMoney — ${esc(n.groom)} & ${esc(n.bride)} — ${dmy(m.weddingDate)}</title>
+  <style>
+    body{font-family:-apple-system,"SF Hebrew","Arial Hebrew",Arial,sans-serif;font-size:11px;color:#222;margin:14mm 10mm}
+    h1{font-size:20px;margin:0 0 2px}h2{font-size:14px;margin:18px 0 6px;border-bottom:2px solid #999;padding-bottom:3px}
+    .sub{color:#666;margin-bottom:10px}
+    table{width:100%;border-collapse:collapse}th,td{border-bottom:1px solid #ddd;padding:3px 5px;text-align:start;vertical-align:top}
+    th{background:#f0ece6;font-weight:700}td.n,th.n{text-align:end;font-variant-numeric:tabular-nums;white-space:nowrap}
+    .sum{max-width:420px}.sum td:first-child{color:#555}.sum tr.gap td{border:none;height:6px}
+    tr{break-inside:avoid}h2{break-after:avoid}
+    @media print{@page{size:A4;margin:12mm}.hint{display:none}}
+    .hint{background:#fff6d6;border:1px solid #e0c060;padding:8px 10px;border-radius:6px;margin-bottom:12px}
+  </style></head><body>
+  <div class="hint">להפקת PDF: הדפסה ← «שמירה כ־PDF». <button onclick="print()">הדפסה עכשיו</button></div>
+  <h1>OurMoney — ${esc(n.groom)} & ${esc(n.bride)}</h1>
+  <div class="sub">${dmy(m.weddingDate)} · ${esc(m.venueName||'')} · הופק ${new Date().toLocaleString('he-IL')}</div>
+  <h2>סיכום</h2>${sum}
+  <h2>אורחים ומתנות (${R.guests.length})</h2>${table(R.guests,gcols)}
+  <h2>ספקים ותשלומים</h2>${table(R.vendors,vcols)}
+  <h2>סיכום</h2>${sum}
+  </body></html>`;
+  const w=window.open('','_blank');
+  if(!w){ toast('הדפדפן חסם את החלון — אפשרו חלונות קופצים ונסו שוב'); return; }
+  w.document.open(); w.document.write(html); w.document.close();
+  setTimeout(()=>{ try{ w.focus(); w.print(); }catch(e){} },400);
+}
+
+/* ------------------------------------------------------------ data dialog  */
+async function dataAction(act){
+  const dlg=$('#dataDlg');
+  if(act==='close') return dlg.close();
+
+  if(act==='task-new'){
+    $('#topicList').innerHTML=[...new Set((Store.state.tasks||[]).map(t=>t.topic).filter(Boolean))]
+      .sort().map(x=>`<option value="${esc(x)}">`).join('');
+    $('#tNew').value=''; $('#tTopic').value=''; $('#tDue').value='';
+    $('#taskDlg').showModal();
+    return;
+  }
+  if(act==='task-cancel') return $('#taskDlg').close();
+
+  if(act==='vendor-new'){
+    ['vnName','vnTotal','vnDue','vnNotes'].forEach(id=>$('#'+id).value='');
+    $('#vnMethod').value=''; $('#vnPaid').checked=false;
+    $('#vendorDlg').showModal(); setTimeout(()=>$('#vnName').focus(),50);
+    return;
+  }
+  if(act==='vendor-cancel') return $('#vendorDlg').close();
+  if(act==='vendor-save'){
+    const name=$('#vnName').value.trim();
+    if(!name) return toast('חסר שם להוצאה');
+    const total=$('#vnTotal').value===''?null:Number($('#vnTotal').value);
+    const method=$('#vnMethod').value||null, due=$('#vnDue').value||null;
+    const notes=$('#vnNotes').value.trim()||null, paid=$('#vnPaid').checked;
+    if(paid&&!total) return toast('כדי לסמן «שולם» צריך עלות');
+    // ids follow the importer's convention: final letters normalised, unique.
+    const base=name.replace(/[םןץףך]/g,c=>({'ם':'מ','ן':'נ','ץ':'צ','ף':'פ','ך':'כ'}[c]));
+    const id=Store.state.vendors.some(v=>v.id===base)?base+' · '+Date.now():base;
+    Store.update(s=>{ s.vendors.push({
+      id, name, category:null, total, advanceRequired:false, dueWhen:null,
+      coveredBy:null, coveredAmount:0, notes, payMethod:method, payDue:due,
+      payments: paid?[{id:(crypto.randomUUID?crypto.randomUUID():'p'+Date.now()),amount:total,method,
+                       date:due||todayISO(),note:null,planned:false,deposit:false}]:[],
+    }); });
+    $('#vendorDlg').close();
+    return toast(`«${name}» נוסף${total?` · ${money(total)}`:''}${paid?' · שולם':''}`);
+  }
+  if(act==='pay-cancel') return $('#payDlg').close();
+  if(act==='pay-save'){
+    const vi=Number($('#pyVendor').value), amt=Number($('#pyAmt').value);
+    if(!amt) return toast('חסר סכום');
+    const method=$('#pyMethod').value||null, date=$('#pyDate').value||null;
+    const note=$('#pyNote').value.trim()||null, paid=$('#pyPaid').checked, dep=$('#pyDep').checked;
+    Store.update(s=>{
+      s.vendors[vi].payments.push({
+        id:(crypto.randomUUID?crypto.randomUUID():'p'+Date.now()),
+        amount:amt, method, date:paid?(date||todayISO()):date, note, planned:!paid, deposit:dep,
+      });
+    });
+    $('#payDlg').close();
+    return toast(paid?`נרשם תשלום ${money(amt)}`:`תוכנן ${money(amt)}${date?` · ${dLabel(date)}`:''}`);
+  }
+  if(act==='task-save'){
+    const title=$('#tNew').value.trim();
+    if(!title) return toast('חסר תיאור למשימה');
+    const topic=$('#tTopic').value.trim()||'כללי';
+    const due=$('#tDue').value||null;
+    Store.update(s=>{ s.tasks.push({
+      id:(crypto.randomUUID?crypto.randomUUID():'t'+Date.now()+Math.random().toString(36).slice(2)),
+      topic, title, status:'open', dueDate:due, daysBefore:null,
+      owner:null, notes:null, source:'נוסף באפליקציה',
+    }); });
+    $('#taskDlg').close();
+    return toast('המשימה נוספה'+(due?` · יעד ${dLabel(due)}`:''));
+  }
+
+  if(act==='slip-cam') return $('#slipCam').click();
+  if(act==='slip-file') return $('#slipPick').click();
+  if(act==='slip-cancel'){ clearSlipPreview(); return $('#slipDlg').close(); }
+  if(act==='slipdb-open') return openSlipDb();
+  if(act==='slipdb-close') return $('#slipDbDlg').close();
+  if(act==='slipdb-csv') return slipsCsv();
+  if(act==='slip-save'){
+    const rec=readSlipForm();
+    if(!rec.period) return toast('חסר חודש');
+    if(rec.gross==null&&rec.net==null) return toast('חסר ברוטו או נטו');
+    rec.id=rec.person+'-'+rec.period;
+    Store.update(s=>{
+      s.capital.slips=s.capital.slips||[];
+      const i=s.capital.slips.findIndex(x=>x.person===rec.person&&x.period===rec.period);
+      if(i>=0) s.capital.slips[i]=Object.assign({},s.capital.slips[i],rec);
+      else s.capital.slips.push(rec);
+      const d=s.capital[rec.person];
+      if(d){
+        d.income=d.income||{gross:null,net:null};
+        if(rec.gross!=null) d.income.gross=rec.gross;
+        if(rec.net!=null) d.income.net=rec.net;
+      }
+    });
+    clearSlipPreview();
+    $('#slipDlg').close();
+    return toast('התלוש נשמר');
+  }
+
+  if(act==='hall-on') return setHall(true);
+  if(act==='hall-off') return setHall(false);
+  if(act==='export-rsvp') return exportRsvp();
+  if(act==='export-xlsx') return exportXlsx();
+  if(act==='export-pdf') return exportPdf();
+  if(act==='guest-new') return openGuestDlg(-1);
+  if(act==='guest-cancel') return $('#guestDlg').close();
+  if(act==='guest-save'){
+    const name=$('#gName').value.trim();
+    if(!name) return toast('חסר שם');
+    const side=$('#gSide').value||'חתן';
+    const group=$('#gGroup').value.trim()||null;
+    const adults=Number($('#gAd').value); const ad=Number.isFinite(adults)?adults:1;
+    const children=Number($('#gCh').value)||0;
+    const phone=$('#gPhone').value.trim()||null;
+    const notes=$('#gNotes').value.trim()||null;
+    const idx=$('#gIdx').value===''?-1:Number($('#gIdx').value);
+    Store.update(s=>{
+      if(idx>=0 && s.guests[idx]){
+        const g=s.guests[idx];
+        g.name=name; g.side=side; g.list=g.list||side; g.group=group;
+        g.adults=ad; g.children=children; g.phone=phone; g.notes=notes;
+      }else{
+        s.guests.push({
+          id:newGuestId(name), name, side, list:side, group,
+          adults:ad, children, phone, email:null, address:null, notes,
+          invitationSent:false, rsvp:'pending',
+          gift:{amount:null,method:null,received:false,date:null,note:null},
+          expectedCheck:null,
+        });
+      }
+    });
+    $('#guestDlg').close();
+    return toast(idx>=0?'האורח עודכן':'האורח נוסף');
+  }
+  if(act==='guest-del'){
+    const idx=Number($('#gIdx').value);
+    const g=Store.state.guests[idx];
+    if(!g||!confirm(`למחוק את «${g.name}» מהרשימה?`)) return;
+    Store.update(s=>{ s.guests[idx]._deleted=true; });
+    $('#guestDlg').close();
+    return toast('האורח הוסר');
+  }
+
+  if(act==='gh-save'){
+    const t=$('#ghTok').value.trim();
+    // Always re-query #ghErr: syncPanel() rebuilds the panel, and a message
+    // written to the old node vanishes -- which made every failure look like
+    // the button simply did nothing.
+    const say=m=>{ const e=$('#ghErr'); if(e) e.textContent=m; };
+    if(!t) return say('חסר אסימון');
+    say('מתחבר…');
+    try{ Sync.saveToken(t); }
+    catch(e){ return say('המכשיר חוסם שמירה מקומית: '+e.message); }
+    try{
+      // A token that was not granted access to the data repo returns 404 on
+      // every call -- the same answer as "no file yet" -- so without this
+      // check it "connects" silently with zero data.
+      const repo=await Sync.api(`repos/${Sync.repo}`);
+      if(!repo){
+        Sync.forget(); syncPanel();
+        return say(`לאסימון אין גישה ל־${Sync.repo}. ביצירת האסימון: `+
+          `Repository access → Only select repositories → ourmoney-data, `+
+          `וגם Permissions → Contents → Read and write`);
+      }
+      await Sync.start();
+      if(Sync.lastError){ const msg=Sync.lastError; Sync.forget(); syncPanel(); return say(msg); }
+      syncPanel(); render();
+      toast(Store.state?`מסונכרן · ${Store.state.guests.length} אורחים`:'מחובר');
+    }catch(e){ Sync.forget(); syncPanel(); say(e.message); }
+    return;
+  }
+  if(act==='gh-forget'){ Sync.forget(); render(); return syncPanel(); }
+  if(act==='gh-now'){ await Sync.run(); syncPanel(); return toast(Sync.lastError||'סונכרן'); }
+  if(act==='gh-pull'){
+    const box=$('#sbDiag'); if(box) box.innerHTML='<p class="note">מוריד…</p>';
+    try{
+      const r=await Sync.fetchRemote();
+      if(!r) throw new Error('אין קובץ בשרת');
+      Store.state=r; Store.migrate(); Store.saveNow(); Sync.seedSnapshot(); render();
+      if(box) box.innerHTML='';
+      toast(`ירדו ${Store.state.guests.length} אורחים · ${Store.state.tasks.length} משימות`);
+    }catch(e){ if(box) box.innerHTML=`<div class="warnbox">${esc(e.message)}</div>`; }
+    return syncPanel();
+  }
+  if(act==='gh-upload'){
+    const gaps=Sync.looksPartial();
+    if(gaps.length&&!confirm('הנתונים כאן נראים חלקיים —\n· '+gaps.join('\n· ')+
+        '\n\nהעלאה תדרוס את השרת. להמשיך?')) return;
+    const box=$('#sbDiag'); if(box) box.innerHTML='<p class="note">מעלה…</p>';
+    try{ await Sync.uploadAll(); if(box) box.innerHTML=
+      '<div class="warnbox" style="background:var(--good-dim);border-color:var(--good);color:var(--good-2)">הועלה בהצלחה ✓</div>'; }
+    catch(e){ if(box) box.innerHTML=`<div class="warnbox">${esc(e.message)}</div>`; }
+    return;
+  }
+  if(act==='gh-diag'){
+    const box=$('#sbDiag'); box.innerHTML='<p class="note">בודק…</p>';
+    try{
+      const d=await Sync.diagnose();
+      const he={guests:'אורחים',vendors:'ספקים',tasks:'משימות',payments:'תשלומים'};
+      if(!d.server){ box.innerHTML='<div class="warnbox">אין עדיין קובץ בשרת</div>'; return; }
+      box.innerHTML=`<table style="margin-top:.6rem"><thead><tr>
+          <th>טבלה</th><th class="num">במכשיר</th><th class="num">בשרת</th></tr></thead><tbody>
+        ${Object.keys(he).map(k=>{
+          const l=d.local?d.local[k]:0, sv=d.server[k];
+          const ok=l===sv&&sv>0;
+          return `<tr><td>${he[k]}</td>
+            <td class="num" style="color:${l>0?'var(--ink)':'var(--bad-2)'}">${l}</td>
+            <td class="num" style="color:${ok?'var(--good-2)':'var(--bad-2)'}">${sv}</td></tr>`;
+        }).join('')}
+        <tr><td>תאריך חתונה בשרת</td><td class="num">—</td>
+          <td class="num" style="color:${d.serverDate?'var(--good-2)':'var(--bad-2)'}">
+          ${esc(d.serverDate||'חסר')}</td></tr>
+        </tbody></table>`;
+    }catch(e){ box.innerHTML=`<div class="warnbox">${esc(e.message)}</div>`; }
+    return;
+  }
+
+  if(act==='export'){ Store.backup('ייצוא ידני'); return Store.exportFile(); }
+  if(act==='import') return $('#fileIn').click();
+  if(act==='reset'){
+    if(!confirm('לאפס את כל הנתונים חזרה למה שהיה באקסל?\nכל המתנות והתשלומים שהוזנו כאן יימחקו.\nמומלץ לייצא גיבוי קודם.')) return;
+    Store.backup('לפני איפוס');
+    Store.state=structuredClone(window.SEED); Store.migrate(); Store.saveNow(); render();
+    return toast('אופס לנתוני האקסל');
+  }
+  if(act==='restore'){
+    const list=Store.backups();
+    if(!list.length) return toast('אין גיבויים');
+    const pick=prompt('איזה גיבוי לשחזר?\n'+
+      list.map((b,i)=>`${i+1}. ${new Date(b.ts).toLocaleString('he-IL')} — ${b.reason}`).join('\n'),'1');
+    const i=Number(pick)-1;
+    if(!(i>=0&&i<list.length)) return;
+    try{ Store.importObj(JSON.parse(list[i].json)); dlg.close(); }
+    catch(e){ toast('שחזור נכשל: '+e.message); }
+  }
+}
+
+function syncPanel(){
+  const el=$('#syncPanel'); if(!el) return;
+  if(!Sync.on){
+    el.innerHTML=`
+      <p class="note" style="margin-bottom:.6rem">
+        הנתונים נשמרים ב־repo פרטי: <b dir="ltr">${esc(Sync.repo)}</b>.
+        צריך אסימון גישה פעם אחת בכל מכשיר.</p>
+      <details class="acc" open><summary>איך מייצרים אסימון (30 שניות)</summary><div>
+        <ol class="note" style="padding-inline-start:1.1rem;line-height:1.9">
+          <li>נכנסים ל־<a href="https://github.com/settings/personal-access-tokens/new"
+              target="_blank" rel="noopener" dir="ltr">github.com/settings/personal-access-tokens/new</a></li>
+          <li><b>Token name:</b> <code dir="ltr">ourmoney</code></li>
+          <li><b>Expiration:</b> 90 days</li>
+          <li><b>Repository access:</b> Only select repositories →
+              <code dir="ltr">ourmoney-data</code></li>
+          <li><b>Permissions</b> → Repository permissions →
+              <b>Contents</b> → <code dir="ltr">Read and write</code></li>
+          <li>Generate token → להעתיק (מתחיל ב־<code dir="ltr">github_pat_</code>)</li>
+        </ol>
+        <p class="note" style="color:var(--warn-2)">
+          האסימון נשמר במכשיר הזה בלבד. אין לשלוח אותו לאף אחד — אם נחשף,
+          מוחקים אותו באותו עמוד ומייצרים חדש.</p>
+      </div></details>
+      <label class="fld" style="margin:.6rem 0"><span>GitHub token</span>
+        <input type="password" id="ghTok" dir="ltr" placeholder="github_pat_…"
+               autocomplete="off"></label>
+      <button class="btn btn-p" style="width:100%" data-act="gh-save">חיבור</button>
+      <p class="note" id="ghErr" style="color:var(--bad-2);margin-top:.5rem"></p>`;
+    return;
+  }
+  const st={ok:'מסונכרן',syncing:'מסנכרן…',error:'שגיאה: '+(Sync.lastError||''),
+             idle:'ממתין',off:'כבוי'}[Sync.status]||'';
+  el.innerHTML=`
+    <p class="note" style="margin-bottom:.6rem">
+      מחובר אל <b dir="ltr">${esc(Sync.repo)}</b><br>סטטוס: ${esc(st)}</p>
+    <button class="btn btn-o" style="width:100%" data-act="gh-now">סנכרון עכשיו</button>
+    <button class="btn btn-o" style="width:100%;margin-top:.4rem" data-act="gh-pull">משיכה מהשרת</button>
+    <button class="btn btn-o" style="width:100%;margin-top:.4rem" data-act="gh-diag">בדיקה: מה יש בשרת</button>
+    <div id="sbDiag"></div>
+    <button class="btn btn-o" style="width:100%;margin-top:.4rem" data-act="gh-upload">העלאת הכול לשרת</button>
+    <button class="btn btn-d" style="width:100%;margin-top:.4rem" data-act="gh-forget">ניתוק</button>`;
+}
+
+document.getElementById('dataBtn').onclick=()=>{
+  const b=Store.backups();
+  $('#dataMeta').innerHTML=
+    `<b>גרסה ${BUILD}</b><br>`+
+    `גיבויים אוטומטיים: ${b.length}${b.length?` · אחרון ${new Date(b[0].ts).toLocaleString('he-IL')}`:''}<br>`+
+    (Sync.on?'הנתונים מסונכרנים בין המכשירים.'
+            :'הנתונים נשמרים בדפדפן הזה בלבד. כדי להעביר למכשיר אחר — ייצאו JSON.');
+  $('#dataDlg [data-act=reset]').hidden=!window.SEED;
+  syncPanel();
+  $('#dataDlg').showModal();
+};
+
+document.getElementById('fileIn').onchange=e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=()=>{ try{ Store.importObj(JSON.parse(r.result)); $('#dataDlg').close(); }
+                 catch(err){ alert('ייבוא נכשל: '+err.message); } };
+  r.readAsText(f);
+  e.target.value='';
+};
+
+const onSlipFile=e=>{
+  const f=e.target.files&&e.target.files[0];
+  e.target.value='';
+  if(f) ingestSlipFile(f);
+};
+document.getElementById('slipCam').onchange=onSlipFile;
+document.getElementById('slipPick').onchange=onSlipFile;
+document.getElementById('slipDlg').addEventListener('close',clearSlipPreview);
+
+/* -------------------------------------------------------------- theme, go  */
+function applyTheme(t){
+  document.documentElement.dataset.theme=t;
+  const meta=document.querySelector('meta[name="theme-color"]');
+  if(meta) meta.content=t==='light'?'#f8f3ee':'#131016';
+  try{ localStorage.setItem(THEME_KEY,t); }catch(e){}
+}
+document.getElementById('themeBtn').onclick=()=>
+  applyTheme(document.documentElement.dataset.theme==='light'?'dark':'light');
+try{ applyTheme(localStorage.getItem(THEME_KEY)||
+     (matchMedia('(prefers-color-scheme: light)').matches?'light':'dark')); }catch(e){}
+
+addEventListener('beforeunload',()=>{ if(Store.state) Store.saveNow(); });
+
+// A rejected promise nobody awaited used to die in silence; on a phone that
+// reads as "the button does nothing". Surface it.
+addEventListener('unhandledrejection',e=>{
+  toast('שגיאה: '+((e.reason&&e.reason.message)||e.reason||'לא ידועה'));
+});
+
+/* ------------------------------------------------------------ auto-update  *
+ * iOS home-screen apps keep serving a cached copy long after a new build is
+ * published; data syncs but the UI stays old. Poll our own URL and offer a
+ * one-tap reload when the served BUILD differs from the running one.
+ */
+async function checkUpdate(){
+  if(location.protocol==='file:') return;
+  try{
+    const r=await fetch(location.href,{cache:'no-store'});
+    const m=(await r.text()).match(/BUILD='([^']+)'/);
+    if(m&&m[1]!==BUILD&&!document.getElementById('updBar')){
+      const d=document.createElement('div');
+      d.id='updBar';
+      d.style.cssText='position:fixed;inset-inline:0;top:calc(env(safe-area-inset-top) + 56px);'+
+        'z-index:98;display:flex;justify-content:center;pointer-events:none';
+      d.innerHTML=`<button style="pointer-events:auto;background:var(--brand);color:var(--on-brand);`+
+        `border-radius:999px;padding:.5rem 1.1rem;font-weight:700;font-size:.85rem;`+
+        `box-shadow:var(--shadow)">יש גרסה חדשה (${esc(m[1])}) — לחצו לרענון</button>`;
+      d.querySelector('button').onclick=()=>location.reload();
+      document.body.appendChild(d);
+    }
+  }catch(e){ /* offline — try again next round */ }
+}
+setInterval(checkUpdate,10*60*1000);
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) checkUpdate(); });
+checkUpdate();
+
+// The hosted build has no data.js, so <html dir> may not be ours to set.
+document.documentElement.dir='rtl';
+document.documentElement.lang='he';
+
+const booted=Store.boot();
+try{ ui.hall=localStorage.getItem(HALL_KEY)==='1'; }catch(e){}
+if(ui.hall){ document.body.classList.add('hall'); active='guests'; }
+if(booted) Store.backup('פתיחת אפליקציה');
+render();
+
+Sync.load();
+Sync.setStatus(Sync.status);
+if(Sync.on) Sync.start();
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) Sync.nudge(); });
+</script>
+</body>
+</html>
